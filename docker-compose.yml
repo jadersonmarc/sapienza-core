@@ -1,0 +1,36 @@
+# Um só Postgres (regra de ouro). Sem Redis: eventos vivem no Postgres
+# (event_outbox + pg_notify) e a sessão NextAuth é JWT stateless.
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sapienza
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sapienza"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  core:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/sapienza
+      AUTH_SECRET: ${AUTH_SECRET:-troque-por-openssl-rand-base64-32}
+      AUTH_TRUST_HOST: "true"
+      PRODUCT_JWT_SECRET: ${PRODUCT_JWT_SECRET:-troque-por-um-segredo-forte}
+      AGENT_TOKEN_ENC_KEY: ${AGENT_TOKEN_ENC_KEY:-}
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
