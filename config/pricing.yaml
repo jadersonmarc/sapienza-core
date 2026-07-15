@@ -1,0 +1,35 @@
+currency: BRL
+setup: { padrao: 3000, porta_assinatura: 0, degrau_13: true }
+produtos:
+  margot:
+    nome: "Margot Atendente"
+    metric: "conversa"          # janela 24h iniciada pelo cliente (grátis na Meta)
+    tiers:
+      - { id: start, mensal: 400,  incluso: 200 }
+      - { id: pro,   mensal: 700,  incluso: 600 }
+      - { id: scale, mensal: 1200, incluso: 1500 }
+    excedente_unitario: 1.50
+    regras:
+      handoff_max_mensagens: 15
+      janela_servico_meta_gratuita: true
+      disparo_ativo_marketing: "add-on com repasse"
+  motor:
+    nome: "Motor de Conteúdo"
+    metric: "peca"              # PEÇA PUBLICADA (não gerada)
+    tiers:
+      - { id: start, mensal: 400,  incluso: 12, canais: 1 }
+      - { id: pro,   mensal: 700,  incluso: 30, canais: 2 }
+      - { id: scale, mensal: 1200, incluso: 60, canais: 3 }   # +blog SEO
+    excedente_unitario: 25.0
+    regras:
+      janela_aprovacao_horas: 48         # silêncio = aprovado -> publica
+      max_regeneracoes_por_peca: 2       # 3ª = pedido customizado (excedente)
+      revisao_manual_sapienza: false
+combo_sistema_sapienza:
+  setup: 6000
+  mensal_start: 1000
+  assinatura: { setup: 0, mensal: 1600 }
+portas_pagamento:
+  - { id: obra,        entrada: 3000, premio_mensal_pct: 0 }
+  - { id: meio_a_meio, entrada: 1500, premio_mensal_pct: 31 }
+  - { id: assinatura,  entrada: 0,    premio_mensal_pct: 73 }
