@@ -21,6 +21,20 @@ const produtoSchema = z.object({
   regras: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
 })
 
+const seatsSchema = z.object({
+  escopo: z.literal("tenant"),
+  base: z.literal("maior_tier_ativo"),
+  ao_exceder: z.literal("bloquear"),
+  por_tier: z.object({
+    start: z.number().int().positive(),
+    pro: z.number().int().positive(),
+    scale: z.number().int().positive(),
+  }),
+  contam_como_seat: z.array(z.enum(["owner", "admin", "member"])).min(1),
+  nao_contam: z.array(z.string()),
+  downgrade: z.literal("bloquear_ate_remover_excedentes"),
+})
+
 const pricingSchema = z.object({
   currency: z.literal("BRL"),
   setup: z.object({
@@ -28,6 +42,7 @@ const pricingSchema = z.object({
     porta_assinatura: z.number(),
     degrau_13: z.boolean(),
   }),
+  seats: seatsSchema,
   produtos: z.object({
     margot: produtoSchema,
     motor: produtoSchema,

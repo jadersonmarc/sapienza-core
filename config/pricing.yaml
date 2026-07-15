@@ -1,18 +1,29 @@
 currency: BRL
 setup: { padrao: 3000, porta_assinatura: 0, degrau_13: true }
+# Seats = limite de usuários por TENANT (transversal aos produtos). Base = maior
+# tier ativo entre as assinaturas do tenant. Hard-block no convite; sem excedente.
+seats:
+  escopo: tenant
+  base: maior_tier_ativo
+  ao_exceder: bloquear
+  por_tier: { start: 1, pro: 3, scale: 10 }
+  contam_como_seat: [owner, admin, member]
+  nao_contam: [super_admin_sapienza, agentes_ia]
+  downgrade: bloquear_ate_remover_excedentes
 produtos:
   margot:
     nome: "Margot Atendente"
-    metric: "conversa"          # janela 24h iniciada pelo cliente (grátis na Meta)
+    metric: "resposta"          # 1 resposta = 1 mensagem gerada e enviada pela IA
     tiers:
-      - { id: start, mensal: 400,  incluso: 200 }
-      - { id: pro,   mensal: 700,  incluso: 600 }
-      - { id: scale, mensal: 1200, incluso: 1500 }
-    excedente_unitario: 1.50
+      - { id: start, mensal: 400,  incluso: 500 }
+      - { id: pro,   mensal: 700,  incluso: 1500 }
+      - { id: scale, mensal: 1200, incluso: 5000 }
+    excedente_unitario: 0.50    # por resposta acima do incluso
     regras:
-      handoff_max_mensagens: 15
-      janela_servico_meta_gratuita: true
-      disparo_ativo_marketing: "add-on com repasse"
+      handoff_max_mensagens: 15  # >15 respostas numa conversa -> handoff humano
+      # Canal default é Evolution (não-oficial): sem janela grátis / conceito de
+      # conversa, sem cobrança de Meta por mensagem. Custo/resposta = token IA.
+      # janela_servico_meta_gratuita e disparo_ativo_marketing só voltam no driver meta.
   motor:
     nome: "Motor de Conteúdo"
     metric: "peca"              # PEÇA PUBLICADA (não gerada)

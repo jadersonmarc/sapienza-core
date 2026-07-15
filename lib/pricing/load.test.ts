@@ -11,17 +11,20 @@ describe("loadPricing", () => {
     expect(p.setup.degrau_13).toBe(true)
   })
 
-  it("materializa os tiers do margot conforme o brief", () => {
+  it("materializa os tiers do margot (métrica resposta)", () => {
     const p = loadPricing(yaml)
     const margot = p.produtos.margot
-    expect(margot.metric).toBe("conversa")
-    expect(margot.excedente_unitario).toBe(1.5)
+    expect(margot.metric).toBe("resposta")
+    expect(margot.excedente_unitario).toBe(0.5)
     expect(margot.tiers.map((t) => [t.id, t.mensal, t.incluso])).toEqual([
-      ["start", 400, 200],
-      ["pro", 700, 600],
-      ["scale", 1200, 1500],
+      ["start", 400, 500],
+      ["pro", 700, 1500],
+      ["scale", 1200, 5000],
     ])
     expect(margot.regras.handoff_max_mensagens).toBe(15)
+    // O canal default (Evolution) não tem janela grátis / disparo de marketing.
+    expect(margot.regras.janela_servico_meta_gratuita).toBeUndefined()
+    expect(margot.regras.disparo_ativo_marketing).toBeUndefined()
   })
 
   it("materializa os tiers do motor com canais", () => {
