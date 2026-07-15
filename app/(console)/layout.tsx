@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { currentContext } from "@/lib/console/current"
+import { tenantSubscriptions } from "@/lib/tenant/context"
 import { Eyebrow } from "@/components/eyebrow"
 import { TenantSwitcher } from "@/components/console/tenant-switcher"
 import { signOutAction } from "@/app/actions"
@@ -7,6 +8,11 @@ import { signOutAction } from "@/app/actions"
 // Shell do console autenticado: header com tenant switcher, nav e sair.
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const { user, tenants, active } = await currentContext()
+
+  // Só mostra o link do Margot se o tenant ativo assina o produto.
+  const subscribesMargot = active
+    ? (await tenantSubscriptions(active.id)).some((s) => s.produto === "margot" && s.status === "active")
+    : false
 
   return (
     <div className="min-h-screen">
@@ -20,6 +26,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           </div>
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/" className="text-muted-foreground hover:text-foreground">Produtos</Link>
+            {subscribesMargot && (
+              <Link href="/margot" className="text-muted-foreground hover:text-foreground">Margot</Link>
+            )}
             <Link href="/faturas" className="text-muted-foreground hover:text-foreground">Faturas</Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">Usuários</Link>
             {user.isSuperadmin && (
