@@ -38,8 +38,8 @@ pnpm billing:close  # fechamento mensal → invoices (Degrau 13)
 - `lib/events/*` — escrever `event_outbox` (contrato com o kit Go).
 - `lib/auth/*`, `auth.ts`, `auth.config.ts`, `middleware.ts` — auth + JWT p/ produtos.
 - `lib/agent/*` — crypto AES, tenant ativo, client BFF (de `spa-sapienza`).
-- `app/(console)/*` — console por tenant; `app/(super)/*` — visão Sapienza.
-- `app/globals.css`, `app/layout.tsx`, `lib/brand/*`, `components/ui/*`,
+- `app/(console)/*` — console por tenant; `app/(console)/super/` — visão Sapienza.
+- `app/globals.css` (tokens OKLCH), `app/layout.tsx`, `components/ui/*`,
   `components/eyebrow.tsx` — design system (de `spa-sapienza`).
 
 ## Convenções

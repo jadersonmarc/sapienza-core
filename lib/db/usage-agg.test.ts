@@ -36,7 +36,7 @@ maybe("agregação de uso (control plane)", () => {
     const rows = await raw<{ count: number }[]>`
       SELECT count FROM public.usage_counters
       WHERE tenant_id = ${tenantId}::uuid AND produto = 'margot'
-        AND period = '2026-07' AND metric = 'conversa'`
+        AND period = '2026-07' AND metric = 'resposta'`
     return rows[0]?.count ?? null
   }
 
@@ -51,7 +51,7 @@ maybe("agregação de uso (control plane)", () => {
           type: "UsageRecorded",
           tenantId,
           produto: "margot",
-          payload: { tenant_id: tenantId, produto: "margot", metric: "conversa", period: "2026-07", count },
+          payload: { tenant_id: tenantId, produto: "margot", metric: "resposta", period: "2026-07", count },
         }),
       )
 

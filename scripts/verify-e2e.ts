@@ -35,16 +35,16 @@ async function main() {
     events.some((e) => e.type === "SubscriptionActivated" && e.produto === "margot"),
   )
 
-  // 2) Billing: uso acima do incluso (600) → excedente.
+  // 2) Billing: uso acima do incluso (pro=1500) → excedente. Métrica margot = 'resposta'.
   await db.execute(sql`
     INSERT INTO public.usage_counters (tenant_id, produto, period, metric, count)
-    VALUES (${tenantId}::uuid, 'margot', ${period}, 'conversa', 700)
+    VALUES (${tenantId}::uuid, 'margot', ${period}, 'resposta', 1700)
     ON CONFLICT (tenant_id, produto, period, metric) DO UPDATE SET count = EXCLUDED.count
   `)
   const { total, lines } = await closeTenantInvoice(tenantId, period)
-  // margot pro mês 1: 700 + max(0,700-600)*1.50 = 700 + 150 = 850
-  check("fatura margot pro c/ excedente", total === 850, `total=${total}`)
-  check("linha excedente = 150", lines[0]?.excedente === 150, `excedente=${lines[0]?.excedente}`)
+  // margot pro mês 1: 700 + max(0,1700-1500)*0.50 = 700 + 100 = 800
+  check("fatura margot pro c/ excedente", total === 800, `total=${total}`)
+  check("linha excedente = 100", lines[0]?.excedente === 100, `excedente=${lines[0]?.excedente}`)
 
   const invEvent = (await db.execute(sql`
     SELECT 1 FROM public.event_outbox

@@ -69,7 +69,7 @@ export const memberships = pgTable("memberships", {
 export const plans = pgTable("plans", {
   produto: produtoEnum("produto").notNull(),
   tier: text("tier").notNull(), // start|pro|scale
-  metric: text("metric").notNull(), // conversa|peca
+  metric: text("metric").notNull(), // resposta|peca
   mensal: numeric("mensal", { precision: 12, scale: 2 }).notNull(),
   incluso: integer("incluso").notNull(),
   canais: integer("canais"), // motor: canais inclusos; margot: null
