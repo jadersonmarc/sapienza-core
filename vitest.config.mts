@@ -8,4 +8,9 @@ export default defineConfig({
       "@": fileURLToPath(new URL(".", import.meta.url)),
     },
   },
+  // Testes de integração compartilham um único Postgres e recriam o schema public
+  // no setup; rodar os arquivos em série evita corrida entre eles.
+  test: {
+    fileParallelism: false,
+  },
 })

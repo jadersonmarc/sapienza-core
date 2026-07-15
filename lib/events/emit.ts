@@ -12,6 +12,11 @@ export type EventType =
   | "UsageRecorded"
   | "TierExceeded"
   | "InvoiceIssued"
+  // Seats (auditoria/console; sem consumidor Go — não entram no kit/events).
+  | "SeatLimitReached"
+  | "MemberInvited"
+  | "MemberRemoved"
+  | "DowngradeBlockedBySeats"
 
 /**
  * Grava um evento no outbox dentro de uma transação drizzle.

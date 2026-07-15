@@ -2,6 +2,13 @@ import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { emitEvent } from "@/lib/events/emit"
 import type { ProdutoId } from "@/lib/pricing/load"
+import {
+  SeatError,
+  highestOf,
+  seatsLimitForTier,
+  seatsUsed,
+  type Tier,
+} from "@/lib/billing/seats"
 
 /** Nome do schema Postgres de um tenant: tenant_<uuid sem hífens>. */
 export function schemaName(tenantId: string): string {
@@ -29,6 +36,11 @@ export async function activateSubscription(args: {
     throw new Error(`tenantId inválido: ${args.tenantId}`)
   }
 
+  // Bloqueio de downgrade por seats: se esta mudança de tier reduzir o MAIOR tier
+  // ativo do tenant abaixo do necessário para os usuários atuais, recusar (o owner
+  // remove os excedentes manualmente; nunca removemos usuários automaticamente).
+  await assertSeatsAllowDowngrade(args.tenantId, args.produto, args.tier as Tier)
+
   await db.transaction(async (tx) => {
     await tx.execute(sql`
       INSERT INTO public.subscriptions (tenant_id, produto, tier, status, hard_cap)
@@ -55,4 +67,45 @@ export async function activateSubscription(args: {
   })
 
   return { schema }
+}
+
+/**
+ * Recusa a efetivação de um downgrade quando o tenant passaria a ter mais
+ * usuários que o limite do novo maior-tier ativo. Emite DowngradeBlockedBySeats
+ * e lança SeatError("DOWNGRADE_BLOCKED_BY_SEATS"). Não faz nada em upgrades/novos.
+ */
+async function assertSeatsAllowDowngrade(
+  tenantId: string,
+  produto: ProdutoId,
+  toTier: Tier,
+): Promise<void> {
+  const active = (await db.execute(sql`
+    SELECT produto, tier FROM public.subscriptions
+    WHERE tenant_id = ${tenantId}::uuid AND status = 'active'
+  `)) as unknown as { produto: string; tier: string }[]
+
+  const current = new Map<string, Tier>()
+  for (const r of active) current.set(r.produto, r.tier as Tier)
+  const fromTier = highestOf([...current.values()])
+
+  // Estado prospectivo: este produto passa a `toTier`, os demais inalterados.
+  const prospective = new Map(current)
+  prospective.set(produto, toTier)
+  const toHighest = highestOf([...prospective.values()])
+
+  const used = await seatsUsed(tenantId)
+  const limit = seatsLimitForTier(toHighest)
+  if (used > limit) {
+    await db.transaction(async (tx) => {
+      await emitEvent(tx, {
+        type: "DowngradeBlockedBySeats",
+        tenantId,
+        payload: { tenant_id: tenantId, from: fromTier, to: toHighest, used, limit },
+      })
+    })
+    throw new SeatError(
+      "DOWNGRADE_BLOCKED_BY_SEATS",
+      `Seu plano ${toHighest} permite ${limit} usuário(s). Remova ${used - limit} para concluir o downgrade.`,
+    )
+  }
 }
