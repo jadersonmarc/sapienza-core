@@ -27,8 +27,15 @@ async function main() {
       `)
       count++
     }
+
+    // Regras do produto → product_rules (lidas read-only pelos data planes).
+    await db.execute(sql`
+      INSERT INTO public.product_rules (produto, rules)
+      VALUES (${produto}, ${JSON.stringify(def.regras)}::jsonb)
+      ON CONFLICT (produto) DO UPDATE SET rules = EXCLUDED.rules
+    `)
   }
-  console.log(`pricing:sync — ${count} planos materializados em public.plans.`)
+  console.log(`pricing:sync — ${count} planos + regras de ${produtos.length} produtos materializados.`)
   process.exit(0)
 }
 

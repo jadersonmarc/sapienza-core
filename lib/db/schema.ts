@@ -78,6 +78,13 @@ export const plans = pgTable("plans", {
   piso: numeric("piso", { precision: 12, scale: 2 }).notNull(),
 }, (t) => [primaryKey({ columns: [t.produto, t.tier] })])
 
+// ── product_rules (regras de produto do pricing.yaml; lidas pelos data planes) ─
+export const productRules = pgTable("product_rules", {
+  produto: produtoEnum("produto").primaryKey(),
+  // ex.: { handoff_max_mensagens: 15, janela_aprovacao_horas: 48, ... }
+  rules: jsonb("rules").notNull().default({}),
+})
+
 // ── subscriptions (tenant ↔ produto ↔ tier ↔ status) ─────────────────────────
 export const subscriptions = pgTable("subscriptions", {
   id: uuid("id").primaryKey().defaultRandom(),
