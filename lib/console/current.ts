@@ -20,6 +20,15 @@ export async function currentContext(): Promise<CurrentContext> {
     email: session.user.email ?? "",
     isSuperadmin: session.user.isSuperadmin ?? false,
   }
+  // Revogação de sessão: o JWT carrega o session_version do login; se o valor no
+  // banco divergir (bump manual), a sessão é inválida → força novo login. Checagem
+  // no runtime Node (o callback edge não acessa o DB).
+  const [row] = await db
+    .select({ v: schema.users.sessionVersion })
+    .from(schema.users)
+    .where(eq(schema.users.id, user.id))
+    .limit(1)
+  if (!row || row.v !== (session.user.sessionVersion ?? 0)) redirect("/login")
   const tenants = await accessibleTenants(user.id, user.isSuperadmin)
   const active = await activeTenant(user.id, user.isSuperadmin)
   return { user, tenants, active }

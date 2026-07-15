@@ -15,16 +15,20 @@ export const authConfig = {
       if (pathname.startsWith("/login")) return true
       return isLoggedIn
     },
+    // Edge-safe: sem DB aqui. sessionVersion é gravado no login e conferido no
+    // runtime Node (lib/console/current.ts) contra public.users para revogação.
     jwt({ token, user }) {
       if (user) {
         token.id = user.id as string
         token.isSuperadmin = (user as { isSuperadmin?: boolean }).isSuperadmin ?? false
+        token.sessionVersion = (user as { sessionVersion?: number }).sessionVersion ?? 0
       }
       return token
     },
     session({ session, token }) {
       session.user.id = token.id as string
       session.user.isSuperadmin = (token.isSuperadmin as boolean) ?? false
+      session.user.sessionVersion = (token.sessionVersion as number) ?? 0
       return session
     },
   },
