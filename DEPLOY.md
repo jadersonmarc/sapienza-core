@@ -17,6 +17,27 @@ Ordem de boot: **Postgres → core → (margot, motor)**. O core migra o `public
 aplicam só as próprias migrations de tenant. Cada boot é idempotente — **não há passo manual de
 migration**.
 
+### E o `sapienza-kit`?
+
+A plataforma tem **quatro** repos, mas só três serviços: o `sapienza-kit` **não é deployado**.
+É uma biblioteca Go (multi-tenancy, gating, contrato de eventos, validação de JWT) que a Margot
+importa e que vai **dentro do binário dela** — não tem `cmd/`, nem Dockerfile, nem porta, e não
+deve virar serviço no Coolify. Procurá-lo na lista de aplicações é procurar o que não existe.
+
+Ele está vendorizado no repo da Margot (`vendor/`), o que torna o build Docker hermético — o
+Coolify não precisa de credencial para buscar um módulo Go privado. Duas consequências que
+aparecem no dia a dia:
+
+- **Mudou o kit? Rode `go mod vendor` na Margot e faça o deploy dela.** Com `vendor/` presente,
+  o Go compila do vendor e ignora o `replace` local: sem esse passo a Margot roda o kit antigo
+  em produção **e a CI passa verde**, porque compila o mesmo código velho.
+- O kit não tem release nem versão para escolher no deploy. O que está em produção é o que foi
+  vendorizado no commit da Margot que você subiu.
+
+O Motor é TypeScript e **não** usa o kit: reimplementa a mesma cola em `lib/platform/*`. Por
+isso uma regra de plataforma (ex.: como o cap é calculado) pode precisar de ajuste nos dois
+lugares — kit para a Margot, `lib/platform` para o Motor.
+
 ---
 
 ## 0. Pré-requisitos
@@ -27,7 +48,8 @@ migration**.
   - `margot.seudominio.com` → margot
   - `motor.seudominio.com` → motor
 - Evolution API já rodando (você já tem) — anote `EVOLUTION_API_URL` e `EVOLUTION_API_KEY`.
-- Os 4 repos no GitHub, na branch `master`.
+- Os repos no GitHub, na branch `master`. Só três viram aplicação no Coolify (core, margot,
+  motor); o `sapienza-kit` é biblioteca e vai dentro da Margot — ver acima.
 - **Opcional:** bucket R2/S3. Só é necessário se for publicar no Instagram ou Threads, que
   exigem imagem. Sem ele o Motor publica em blog/LinkedIn/X/Facebook normalmente.
 
@@ -83,6 +105,9 @@ mostra a tela de login.
 **Application → GitHub → `sapienza-margot`**, `master`, Dockerfile, domínio
 `https://margot.seudominio.com`, porta **8081**.
 
+> Nenhuma configuração para o `sapienza-kit`: ele já está no `vendor/` deste repo e é compilado
+> junto (`go build -mod=vendor`, sem rede). O Coolify não precisa de acesso ao repo do kit.
+
 | Var | Valor |
 |---|---|
 | `DATABASE_URL` | a mesma do core |
@@ -100,6 +125,19 @@ POST https://margot.seudominio.com/webhook/evolution
 header: apikey: <EVOLUTION_WEBHOOK_SECRET>
 evento: messages.upsert
 ```
+
+`EVOLUTION_WEBHOOK_SECRET` é o segredo **global**, o padrão para quem ainda não tem o seu. Sem
+ele (e sem segredo de tenant) o webhook recusa tudo — é fail-closed de propósito.
+
+> **Dê a cada tenant um segredo próprio.** Com o global, quem o tiver consegue forjar um payload
+> em nome de qualquer instância — injetando mensagem no schema daquele cliente e gastando seu
+> orçamento de IA. Depois de conectar a instância do cliente (passo 6):
+> ```bash
+> curl -X POST https://margot.seudominio.com/api/v1/channel/rotate-webhook-secret \
+>   -H "authorization: Bearer <JWT do tenant>"
+> ```
+> Devolve o segredo **uma única vez** — cole no header `apikey` do webhook daquela instância na
+> Evolution. A partir daí só ele abre aquela instância; nem o global.
 
 Verifique: `curl https://margot.seudominio.com/health`.
 
@@ -122,6 +160,26 @@ o outbox.
 
 > As credenciais de Instagram/LinkedIn/etc. **não são env** — o cliente as fornece no setup e
 > elas ficam cifradas em `motor_channels`.
+
+### Cota de geração (teto do seu custo de IA)
+
+Gerar peça consome cota igual à de publicação do plano: **start 12 / pro 30 / scale 60 por mês**.
+Ao acabar, criar peça responde **409** — é esperado, não é falha. Regenerar não consome esta
+cota (segue com o limite de 2 por peça).
+
+A cota é contada em `usage_counters` com `metric='geracao'` e **não entra na fatura** (o
+fechamento só olha `metric='peca'`). Para ver o consumo do mês:
+
+```sql
+SELECT metric, count FROM usage_counters
+ WHERE tenant_id = '<uuid>' AND produto = 'motor' AND period = to_char(now(), 'YYYY-MM');
+```
+
+> **O cron `generate-draft` come da mesma cota.** Ele roda seg/qua/sex (~13/mês), então num
+> tenant **start** (cota 12) consome praticamente tudo e o cliente fica sem cota para gerar à
+> mão. Nada quebra — o cron pula quem está sem cota, e isso aparece como `skipped` na resposta
+> dele. Se incomodar, reduza a frequência em `sapienza-motor/.github/workflows/cron-generate-draft.yml`
+> (ex.: `0 11 * * 1` = só segunda, ~4/mês). É mudança de cron, não de código.
 
 ## 6. Primeiro cliente
 
@@ -238,6 +296,7 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | Sintoma | Causa provável |
 |---|---|
 | Console dá 401 ao abrir Margot/Motor | `PRODUCT_JWT_SECRET` diferente entre os serviços |
+| Mudei o kit, subi a Margot e nada mudou | faltou `go mod vendor` na Margot: o build usa o `vendor/`, não o `replace` local |
 | Cron responde 401 | `WEBHOOK_SECRET` do GitHub ≠ do serviço |
 | Cron responde 3xx | rota capturada pelo middleware — o faturamento não está rodando |
 | Tabelas do tenant não existem | outbox não drenado: `POST /api/cron/provision` no motor; no margot, reinicie (catch-up no boot) |
