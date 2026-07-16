@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import {
   motorContext,
   createContent,
+  createFromBrief,
   transitionContent,
   regenerateContent,
   publishContent,
@@ -27,6 +28,27 @@ export async function createContentAction(_prev: ActionState, formData: FormData
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça" }
+  }
+  revalidatePath("/motor/conteudo")
+  redirect(`/motor/conteudo/${id}`)
+}
+
+export async function createFromBriefAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const objetivo = String(formData.get("objetivo") ?? "").trim()
+  if (!objetivo) return { error: "descreva o objetivo do conteúdo" }
+  let id: string
+  try {
+    const ctx = await motorContext()
+    const created = await createFromBrief(ctx, {
+      objetivo,
+      pontosChave: String(formData.get("pontosChave") ?? "").trim() || undefined,
+      publico: String(formData.get("publico") ?? "").trim() || undefined,
+      tom: String(formData.get("tom") ?? "").trim() || undefined,
+      pilar: String(formData.get("pilar") ?? "").trim() || undefined,
+    })
+    id = created.id
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao gerar do brief" }
   }
   revalidatePath("/motor/conteudo")
   redirect(`/motor/conteudo/${id}`)

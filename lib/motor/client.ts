@@ -95,6 +95,21 @@ export async function createContent(ctx: MotorCtx, prompt: string): Promise<{ id
   })
 }
 
+export type BriefInput = {
+  objetivo: string
+  pontosChave?: string
+  publico?: string
+  tom?: string
+  pilar?: string
+}
+
+export async function createFromBrief(ctx: MotorCtx, input: BriefInput): Promise<{ id: string; slug: string }> {
+  return call<{ id: string; slug: string }>(ctx, "/api/v1/content/brief", {
+    method: "POST",
+    body: JSON.stringify(input),
+  })
+}
+
 export async function transitionContent(
   ctx: MotorCtx,
   id: string,

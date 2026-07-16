@@ -3,6 +3,7 @@ import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listContent, MotorError } from "@/lib/motor/client"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
 import { NewContentForm } from "./new-form"
+import { BriefForm } from "./brief-form"
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: "rascunho",
@@ -41,6 +42,7 @@ export default async function ConteudoPage() {
       </div>
 
       <NewContentForm />
+      <BriefForm />
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
