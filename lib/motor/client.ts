@@ -3,12 +3,17 @@ import { currentContext } from "@/lib/console/current"
 import { roleInTenant, tenantSubscriptions } from "@/lib/tenant/context"
 import { issueProductToken } from "@/lib/auth/product-jwt"
 import type {
+  AnalysesResult,
+  AnalysisType,
   ChannelsStatus,
   ContentDetail,
   ContentItem,
   ContentStatus,
   Platform,
   SetupStatus,
+  SocialCaption,
+  SocialDraftsResult,
+  SocialPlatform,
 } from "./types"
 
 // BFF do console → API do Motor. Server-only: emite o JWT curto do core
@@ -141,4 +146,57 @@ export async function connectChannel(
 
 export async function getSetup(ctx: MotorCtx): Promise<SetupStatus> {
   return call<SetupStatus>(ctx, "/api/v1/setup")
+}
+
+export async function generateSocialCaption(
+  ctx: MotorCtx,
+  id: string,
+  platform: SocialPlatform,
+): Promise<SocialCaption> {
+  return call<SocialCaption>(ctx, `/api/v1/content/${id}/social`, {
+    method: "POST",
+    body: JSON.stringify({ platform }),
+  })
+}
+
+export async function listSocialDrafts(ctx: MotorCtx, id: string): Promise<SocialDraftsResult> {
+  return call<SocialDraftsResult>(ctx, `/api/v1/content/${id}/social`)
+}
+
+export async function listAnalyses(ctx: MotorCtx, id: string): Promise<AnalysesResult> {
+  return call<AnalysesResult>(ctx, `/api/v1/content/${id}/analyze`)
+}
+
+export async function runAnalysis(ctx: MotorCtx, id: string, type: AnalysisType) {
+  return call<{ type: AnalysisType; payload: unknown; model: string | null }>(
+    ctx,
+    `/api/v1/content/${id}/analyze`,
+    { method: "POST", body: JSON.stringify({ type }) },
+  )
+}
+
+/** URL do preview de imagem on-brand (proxied pelo console p/ não expor MOTOR_API_URL). */
+export function previewImageUrl(params: {
+  text: string
+  archetype?: string
+  format?: string
+  pilar?: string | null
+}): string {
+  const q = new URLSearchParams({
+    text: params.text,
+    archetype: params.archetype ?? "capa",
+    format: params.format ?? "ig-feed",
+  })
+  if (params.pilar) q.set("pilar", params.pilar)
+  return `/motor/preview?${q.toString()}`
+}
+
+/** Server-only: busca o PNG do preview no Motor (rota pública /api/og). */
+export async function fetchPreviewImage(search: URLSearchParams): Promise<Response> {
+  const allowed = new URLSearchParams()
+  for (const k of ["text", "archetype", "format", "pilar", "field", "index", "total", "kind", "caption"]) {
+    const v = search.get(k)
+    if (v) allowed.set(k, v)
+  }
+  return fetch(`${baseUrl()}/api/og?${allowed.toString()}`, { cache: "no-store" })
 }

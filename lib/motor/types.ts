@@ -30,6 +30,41 @@ export type ChannelsStatus = {
   channels: { platform: Platform; enabled: boolean }[]
 }
 
+export type SocialPlatform = "instagram" | "linkedin"
+
+export type SocialCaption = {
+  platform: SocialPlatform
+  body: string
+  hashtags: string[]
+  model: string | null
+}
+
+export type SocialDraft = {
+  platform: SocialPlatform
+  body: string
+  hashtags: string[]
+  status: string
+}
+
+export type SocialDraftsResult = {
+  drafts: SocialDraft[]
+  platforms: { platform: SocialPlatform; label: string }[]
+}
+
+export type AnalysisType = "quality" | "seo" | "emotional" | "thematic"
+
+export type Analysis = {
+  type: AnalysisType
+  payload: unknown
+  model: string | null
+  created_at: string
+}
+
+export type AnalysesResult = {
+  analyses: Analysis[]
+  types: { type: AnalysisType; label: string }[]
+}
+
 export type SetupStatus = {
   active: boolean
   tier: string | null

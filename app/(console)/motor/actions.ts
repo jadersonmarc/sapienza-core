@@ -9,9 +9,11 @@ import {
   regenerateContent,
   publishContent,
   connectChannel,
+  generateSocialCaption,
+  runAnalysis,
   MotorError,
 } from "@/lib/motor/client"
-import type { ContentStatus, Platform } from "@/lib/motor/types"
+import type { AnalysisType, ContentStatus, Platform, SocialPlatform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string }
 
@@ -71,6 +73,34 @@ export async function publishAction(_prev: ActionState, formData: FormData): Pro
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao publicar" }
+  }
+}
+
+export async function generateSocialAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const id = String(formData.get("id") ?? "")
+    const platform = String(formData.get("platform") ?? "") as SocialPlatform
+    if (!id || (platform !== "instagram" && platform !== "linkedin")) return { error: "dados inválidos" }
+    await generateSocialCaption(ctx, id, platform)
+    revalidatePath(`/motor/conteudo/${id}`)
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao gerar legenda" }
+  }
+}
+
+export async function runAnalysisAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const id = String(formData.get("id") ?? "")
+    const type = String(formData.get("type") ?? "") as AnalysisType
+    if (!id || !type) return { error: "dados inválidos" }
+    await runAnalysis(ctx, id, type)
+    revalidatePath(`/motor/conteudo/${id}`)
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao analisar" }
   }
 }
 

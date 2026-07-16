@@ -1,9 +1,18 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, getContent, MotorError } from "@/lib/motor/client"
-import type { ContentStatus } from "@/lib/motor/types"
+import {
+  motorContext,
+  getContent,
+  listSocialDrafts,
+  listAnalyses,
+  previewImageUrl,
+  MotorError,
+} from "@/lib/motor/client"
+import type { Analysis, ContentStatus, SocialDraft } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
+import { SocialPanel } from "./social-panel"
+import { AnalyzePanel } from "./analyze-panel"
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: "rascunho",
@@ -32,6 +41,12 @@ export default async function ContentDetailPage({
 
   try {
     const item = await getContent(ctx, id)
+    // Social/análises degradam sem derrubar a página (o essencial é a peça).
+    const [social, analyses] = await Promise.all([
+      listSocialDrafts(ctx, id).then((r) => r.drafts).catch((): SocialDraft[] => []),
+      listAnalyses(ctx, id).catch(() => ({ analyses: [] as Analysis[], types: [] })),
+    ])
+    const title = item.revision?.title || item.slug
     return (
       <div className="space-y-6">
         <div className="space-y-2">
@@ -60,21 +75,37 @@ export default async function ContentDetailPage({
 
         <ItemActions id={item.id} status={item.status} regenBlocked={item.regen_count >= REGEN_LIMIT} />
 
-        <div className="space-y-2">
-          <h2 className="text-sm font-medium text-muted-foreground">Rascunho atual</h2>
-          {item.revision ? (
-            <article className="rounded-xl border border-border p-4">
-              {item.revision.excerpt && (
-                <p className="mb-3 text-sm italic text-muted-foreground">{item.revision.excerpt}</p>
-              )}
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                {item.revision.body_markdown}
-              </pre>
-            </article>
-          ) : (
-            <p className="text-sm text-muted-foreground">Sem revisão.</p>
-          )}
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Rascunho atual</h2>
+            {item.revision ? (
+              <article className="rounded-xl border border-border p-4">
+                {item.revision.excerpt && (
+                  <p className="mb-3 text-sm italic text-muted-foreground">{item.revision.excerpt}</p>
+                )}
+                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
+                  {item.revision.body_markdown}
+                </pre>
+              </article>
+            ) : (
+              <p className="text-sm text-muted-foreground">Sem revisão.</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground">Prévia da imagem</h2>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={previewImageUrl({ text: title, pilar: item.pilar, archetype: "capa", format: "ig-feed" })}
+              alt={`Prévia on-brand de ${title}`}
+              className="w-full rounded-xl border border-border"
+            />
+            <p className="text-xs text-muted-foreground">Capa on-brand (4:5) gerada pelo Motor no publish.</p>
+          </div>
         </div>
+
+        <SocialPanel id={item.id} drafts={social} />
+
+        <AnalyzePanel id={item.id} analyses={analyses.analyses} types={analyses.types} />
       </div>
     )
   } catch (e) {
