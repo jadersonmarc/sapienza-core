@@ -57,6 +57,12 @@ export default async function MotorPage() {
           Calendário
         </Link>
         <Link
+          href="/motor/relatorio"
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Relatório do mês
+        </Link>
+        <Link
           href="/motor/canais"
           className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
         >
