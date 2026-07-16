@@ -16,8 +16,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: POST /api/cron/billing-close
+        env:
+          CORE_URL: ${{ secrets.CORE_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          PERIOD: ${{ github.event.inputs.period }}
         run: |
-          curl -fsS -X POST "${{ secrets.CORE_URL }}/api/cron/billing-close" \
-            -H "x-webhook-secret: ${{ secrets.WEBHOOK_SECRET }}" \
+          set -euo pipefail
+          # --fail-with-body: erro HTTP falha o job E mostra o corpo. Sem -L de
+          # propósito: um redirect aqui significa que o middleware capturou a rota
+          # e a fatura não foi fechada — queremos que isso quebre, não que passe.
+          body=$(curl --fail-with-body -sS -X POST "$CORE_URL/api/cron/billing-close" \
+            -H "x-webhook-secret: $WEBHOOK_SECRET" \
             -H "content-type: application/json" \
-            -d "{\"period\":\"${{ github.event.inputs.period }}\"}"
+            -d "$(jq -nc --arg p "$PERIOD" '{period: $p}')")
+          echo "$body" | jq .
+          # Erro por-tenant volta em HTTP 200 dentro de `errors` — sem isto o job
+          # ficaria verde com todas as faturas falhando.
+          if [ "$(echo "$body" | jq '.errors | length')" != "0" ]; then
+            echo "::error::fechamento falhou para um ou mais tenants"
+            exit 1
+          fi
