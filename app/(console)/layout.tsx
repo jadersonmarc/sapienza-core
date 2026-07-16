@@ -9,10 +9,10 @@ import { signOutAction } from "@/app/actions"
 export default async function ConsoleLayout({ children }: { children: React.ReactNode }) {
   const { user, tenants, active } = await currentContext()
 
-  // Só mostra o link do Margot se o tenant ativo assina o produto.
-  const subscribesMargot = active
-    ? (await tenantSubscriptions(active.id)).some((s) => s.produto === "margot" && s.status === "active")
-    : false
+  // Só mostra os links de produto se o tenant ativo assina o produto.
+  const subs = active ? await tenantSubscriptions(active.id) : []
+  const subscribesMargot = subs.some((s) => s.produto === "margot" && s.status === "active")
+  const subscribesMotor = subs.some((s) => s.produto === "motor" && s.status === "active")
 
   return (
     <div className="min-h-screen">
@@ -28,6 +28,9 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             <Link href="/" className="text-muted-foreground hover:text-foreground">Produtos</Link>
             {subscribesMargot && (
               <Link href="/margot" className="text-muted-foreground hover:text-foreground">Margot</Link>
+            )}
+            {subscribesMotor && (
+              <Link href="/motor" className="text-muted-foreground hover:text-foreground">Motor</Link>
             )}
             <Link href="/faturas" className="text-muted-foreground hover:text-foreground">Faturas</Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">Usuários</Link>
