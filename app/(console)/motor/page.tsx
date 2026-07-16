@@ -51,6 +51,12 @@ export default async function MotorPage() {
           Ver conteúdo
         </Link>
         <Link
+          href="/motor/calendario"
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Calendário
+        </Link>
+        <Link
           href="/motor/canais"
           className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
         >

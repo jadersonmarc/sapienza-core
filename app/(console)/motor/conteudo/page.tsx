@@ -63,7 +63,7 @@ export default async function ConteudoPage() {
                 <tr key={it.id} className="border-t border-border hover:bg-muted/50">
                   <td className="px-4 py-2">
                     <Link href={`/motor/conteudo/${it.id}`} className="hover:underline">
-                      {it.slug}
+                      {it.title || it.slug}
                     </Link>
                   </td>
                   <td className="px-4 py-2">

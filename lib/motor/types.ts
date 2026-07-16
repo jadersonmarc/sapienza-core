@@ -13,6 +13,7 @@ export type ContentItem = {
   scheduled_at: string | null
   published_at: string | null
   regen_count: number
+  title?: string | null
 }
 
 export type ContentRevision = {
