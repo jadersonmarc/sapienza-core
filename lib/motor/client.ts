@@ -178,6 +178,19 @@ export async function listSocialDrafts(ctx: MotorCtx, id: string): Promise<Socia
   return call<SocialDraftsResult>(ctx, `/api/v1/content/${id}/social`)
 }
 
+export async function saveSocialCaption(
+  ctx: MotorCtx,
+  id: string,
+  platform: SocialPlatform,
+  body: string,
+  hashtags: string[],
+): Promise<SocialCaption> {
+  return call<SocialCaption>(ctx, `/api/v1/content/${id}/social`, {
+    method: "PUT",
+    body: JSON.stringify({ platform, body, hashtags }),
+  })
+}
+
 export async function listAnalyses(ctx: MotorCtx, id: string): Promise<AnalysesResult> {
   return call<AnalysesResult>(ctx, `/api/v1/content/${id}/analyze`)
 }

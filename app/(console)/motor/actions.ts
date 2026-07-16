@@ -11,6 +11,7 @@ import {
   publishContent,
   connectChannel,
   generateSocialCaption,
+  saveSocialCaption,
   runAnalysis,
   MotorError,
 } from "@/lib/motor/client"
@@ -109,6 +110,34 @@ export async function generateSocialAction(_prev: ActionState, formData: FormDat
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao gerar legenda" }
+  }
+}
+
+/** Parseia hashtags de texto livre: remove #, separa por espaço/vírgula, deduplica. */
+function parseHashtags(input: string): string[] {
+  return Array.from(
+    new Set(
+      input
+        .split(/[\s,]+/)
+        .map((t) => t.replace(/^#+/, "").trim())
+        .filter(Boolean),
+    ),
+  )
+}
+
+export async function saveSocialAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const id = String(formData.get("id") ?? "")
+    const platform = String(formData.get("platform") ?? "") as SocialPlatform
+    const body = String(formData.get("body") ?? "").trim()
+    if (!id || (platform !== "instagram" && platform !== "linkedin")) return { error: "dados inválidos" }
+    if (!body) return { error: "a legenda não pode ficar vazia" }
+    await saveSocialCaption(ctx, id, platform, body, parseHashtags(String(formData.get("hashtags") ?? "")))
+    revalidatePath(`/motor/conteudo/${id}`)
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao salvar legenda" }
   }
 }
 
