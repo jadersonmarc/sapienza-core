@@ -1,0 +1,23 @@
+name: Fechar faturas do mês
+
+# Fecha o ciclo do mês anterior p/ todos os tenants ativos (invoices + eventos).
+# Dia 1, 06:00 UTC. Secrets: CORE_URL, WEBHOOK_SECRET.
+on:
+  schedule:
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "Período YYYY-MM (vazio = mês anterior)"
+        required: false
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/cron/billing-close
+        run: |
+          curl -fsS -X POST "${{ secrets.CORE_URL }}/api/cron/billing-close" \
+            -H "x-webhook-secret: ${{ secrets.WEBHOOK_SECRET }}" \
+            -H "content-type: application/json" \
+            -d "{\"period\":\"${{ github.event.inputs.period }}\"}"
