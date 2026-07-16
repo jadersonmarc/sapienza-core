@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listContent, MotorError } from "@/lib/motor/client"
-import { motorMonthlyBilling, currentPeriod } from "@/lib/motor/report"
+import { motorMonthlyBilling, motorInvoiceHistory, currentPeriod } from "@/lib/motor/report"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -28,7 +28,10 @@ export default async function RelatorioPage() {
   const ctx = await motorContext()
   const period = currentPeriod()
 
-  const billing = await motorMonthlyBilling(ctx.tenantId, period)
+  const [billing, invoices] = await Promise.all([
+    motorMonthlyBilling(ctx.tenantId, period),
+    motorInvoiceHistory(ctx.tenantId),
+  ])
 
   let items: ContentItem[] = []
   let unavailable: string | null = null
@@ -93,6 +96,46 @@ export default async function RelatorioPage() {
       ) : (
         <p className="text-sm text-muted-foreground">Sem assinatura Motor ativa para faturar.</p>
       )}
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Histórico de faturas (Motor)</h2>
+        {invoices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Nenhuma fatura emitida ainda — a primeira fecha no fim do ciclo.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="text-left">
+                  <th className="px-4 py-2 font-medium">Período</th>
+                  <th className="px-4 py-2 font-medium">Plano</th>
+                  <th className="px-4 py-2 text-right font-medium">Peças/Incl.</th>
+                  <th className="px-4 py-2 text-right font-medium">Excedente</th>
+                  <th className="px-4 py-2 text-right font-medium">Subtotal</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.period} className="border-t border-border">
+                    <td className="px-4 py-2 font-mono text-xs">{inv.period}</td>
+                    <td className="px-4 py-2">{inv.tier}</td>
+                    <td className="px-4 py-2 text-right">
+                      {inv.count}/{inv.incluso}
+                    </td>
+                    <td className="px-4 py-2 text-right">{brl(inv.excedente)}</td>
+                    <td className="px-4 py-2 text-right">{brl(inv.subtotal)}</td>
+                    <td className="px-4 py-2">
+                      <span className="rounded bg-muted px-2 py-0.5 text-xs">{inv.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground">Atividade editorial</h2>

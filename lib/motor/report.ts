@@ -1,5 +1,5 @@
-import { sql } from "drizzle-orm"
-import { db } from "@/lib/db"
+import { desc, eq, sql } from "drizzle-orm"
+import { db, schema } from "@/lib/db"
 import { invoiceLine, monthIndex, overage } from "@/lib/billing/compute"
 
 // Prévia do mês corrente para o Motor (não persiste — a fatura é emitida pelo
@@ -81,4 +81,52 @@ export async function motorMonthlyBilling(
     subtotal,
     hardCap: r.hard_cap,
   }
+}
+
+// Linha de fatura como o billing:close persiste em invoices.lines.
+type InvoiceLineJson = {
+  produto: string
+  tier: string
+  count: number
+  incluso: number
+  excedente: number
+  subtotal: number
+}
+
+export type MotorInvoice = {
+  period: string
+  status: string
+  issuedAt: string
+  tier: string
+  count: number
+  incluso: number
+  excedente: number
+  subtotal: number
+}
+
+/** Histórico de faturas EMITIDAS (billing:close), recortado na linha do Motor. */
+export async function motorInvoiceHistory(tenantId: string, limit = 24): Promise<MotorInvoice[]> {
+  const rows = await db
+    .select()
+    .from(schema.invoices)
+    .where(eq(schema.invoices.tenantId, tenantId))
+    .orderBy(desc(schema.invoices.period))
+    .limit(limit)
+
+  const out: MotorInvoice[] = []
+  for (const inv of rows) {
+    const line = ((inv.lines as InvoiceLineJson[]) ?? []).find((l) => l.produto === "motor")
+    if (!line) continue // fatura sem linha do Motor (só outro produto)
+    out.push({
+      period: inv.period,
+      status: inv.status,
+      issuedAt: inv.issuedAt instanceof Date ? inv.issuedAt.toISOString() : String(inv.issuedAt),
+      tier: line.tier,
+      count: line.count,
+      incluso: line.incluso,
+      excedente: Number(line.excedente),
+      subtotal: Number(line.subtotal),
+    })
+  }
+  return out
 }
