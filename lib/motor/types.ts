@@ -24,7 +24,7 @@ export type ContentRevision = {
 
 export type ContentDetail = ContentItem & { revision: ContentRevision | null }
 
-export type Platform = "instagram" | "linkedin" | "blog"
+export type Platform = "instagram" | "linkedin" | "blog" | "facebook" | "twitter" | "threads"
 
 export type ChannelsStatus = {
   limit: number
