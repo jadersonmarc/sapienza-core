@@ -62,12 +62,32 @@ export async function transitionAction(_prev: ActionState, formData: FormData): 
     const to = String(formData.get("to") ?? "") as ContentStatus
     const scheduledAt = String(formData.get("scheduledAt") ?? "").trim() || undefined
     if (!id || !to) return { error: "transição inválida" }
-    await transitionContent(ctx, id, to, scheduledAt ? new Date(scheduledAt).toISOString() : undefined)
+    await transitionContent(ctx, id, to, {
+      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+    })
     revalidatePath(`/motor/conteudo/${id}`)
     revalidatePath("/motor/conteudo")
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha na transição" }
+  }
+}
+
+/** Rejeição explícita: volta a peça para rascunho com um motivo (auditado); sai do
+ *  caminho de auto-publicação da janela de 48h. */
+export async function rejectAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const id = String(formData.get("id") ?? "")
+    const note = String(formData.get("note") ?? "").trim()
+    if (!id) return { error: "peça inválida" }
+    if (!note) return { error: "informe o motivo da rejeição" }
+    await transitionContent(ctx, id, "draft", { note })
+    revalidatePath(`/motor/conteudo/${id}`)
+    revalidatePath("/motor/conteudo")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao rejeitar" }
   }
 }
 

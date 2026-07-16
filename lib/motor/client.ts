@@ -114,11 +114,11 @@ export async function transitionContent(
   ctx: MotorCtx,
   id: string,
   to: ContentStatus,
-  scheduledAt?: string,
+  opts?: { scheduledAt?: string; note?: string },
 ): Promise<{ ok: boolean }> {
   return call<{ ok: boolean }>(ctx, `/api/v1/content/${id}/transition`, {
     method: "POST",
-    body: JSON.stringify({ to, scheduledAt }),
+    body: JSON.stringify({ to, scheduledAt: opts?.scheduledAt, note: opts?.note }),
   })
 }
 

@@ -5,6 +5,7 @@ import {
   transitionAction,
   regenerateAction,
   publishAction,
+  rejectAction,
   type ActionState,
 } from "../../actions"
 import type { ContentStatus } from "@/lib/motor/types"
@@ -45,7 +46,7 @@ function TransitionButton({
 }
 
 /** Publica nos canais habilitados (transição→published faturável na 1ª vez). */
-function PublishButton({ id }: { id: string }) {
+function PublishButton({ id, label = "Publicar agora" }: { id: string; label?: string }) {
   const [state, action, pending] = useActionState(publishAction, initial)
   return (
     <form action={action} className="inline-flex flex-col gap-1">
@@ -55,7 +56,7 @@ function PublishButton({ id }: { id: string }) {
         disabled={pending}
         className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {pending ? "Publicando…" : "Publicar agora"}
+        {pending ? "Publicando…" : label}
       </button>
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}
     </form>
@@ -86,6 +87,34 @@ function ScheduleForm({ id }: { id: string }) {
         {pending ? "…" : "Agendar"}
       </button>
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}
+    </form>
+  )
+}
+
+/** Rejeição explícita: volta a peça para rascunho com um motivo (auditado). */
+function RejectForm({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(rejectAction, initial)
+  return (
+    <form action={action} className="flex flex-col gap-2 rounded-xl border border-border p-4">
+      <label className="text-sm font-medium">Rejeitar (volta a rascunho)</label>
+      <input type="hidden" name="id" value={id} />
+      <textarea
+        name="note"
+        required
+        rows={2}
+        placeholder="Motivo da rejeição (fica no histórico)…"
+        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+      />
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg border border-destructive px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+        >
+          {pending ? "…" : "Rejeitar"}
+        </button>
+        {state.error && <span className="text-sm text-destructive">{state.error}</span>}
+      </div>
     </form>
   )
 }
@@ -134,17 +163,17 @@ export function ItemActions({
         {status === "draft" && (
           <TransitionButton id={id} to="in_review" label="Enviar para aprovação" />
         )}
-        {(status === "draft" || status === "in_review" || status === "scheduled") && (
-          <PublishButton id={id} />
-        )}
+        {/* Em aprovação, o publish É a aprovação explícita (antecipa a janela de 48h). */}
+        {status === "in_review" && <PublishButton id={id} label="Aprovar e publicar" />}
+        {(status === "draft" || status === "scheduled") && <PublishButton id={id} />}
         {status === "published" && <TransitionButton id={id} to="archived" label="Arquivar" />}
         {(status === "published" || status === "archived") && (
           <TransitionButton id={id} to="draft" label="Voltar a rascunho" />
         )}
-        {(status === "in_review" || status === "scheduled") && (
-          <TransitionButton id={id} to="draft" label="Voltar a rascunho" />
-        )}
+        {status === "scheduled" && <TransitionButton id={id} to="draft" label="Voltar a rascunho" />}
       </div>
+
+      {status === "in_review" && <RejectForm id={id} />}
 
       {(status === "draft" || status === "in_review") && <ScheduleForm id={id} />}
 
