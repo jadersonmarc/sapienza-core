@@ -10,6 +10,13 @@ async function main() {
   if (!url) throw new Error("DATABASE_URL não definida")
   const sqlc = postgres(url, { prepare: false, max: 1 })
 
+  // Roda no boot de cada container, e num deploy pode haver dois de pé ao mesmo
+  // tempo. Sem lock, os dois leem `_migrations` vazia e tentam aplicar a mesma
+  // migration: um commita, o outro morre com "already exists" e o container entra
+  // em restart loop. O lock serializa; quem chega depois vê a migration aplicada e
+  // pula. Liberado no fim da sessão (fecha junto com a conexão).
+  await sqlc`SELECT pg_advisory_lock(hashtext('sapienza:migrate:control-plane'))`
+
   await sqlc`CREATE TABLE IF NOT EXISTS public._migrations (
     name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now()
   )`
@@ -32,6 +39,7 @@ async function main() {
     console.log(`apply ${name}`)
   }
 
+  await sqlc`SELECT pg_advisory_unlock(hashtext('sapienza:migrate:control-plane'))`
   await sqlc.end()
   console.log("migrate — control plane pronto.")
 }
