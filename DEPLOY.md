@@ -17,6 +17,24 @@ Ordem de boot: **Postgres → core → (margot, motor)**. O core migra o `public
 aplicam só as próprias migrations de tenant. Cada boot é idempotente — **não há passo manual de
 migration**.
 
+> ### Build Pack = **Dockerfile** nos três. Não use Nixpacks.
+>
+> O Coolify vem com **Nixpacks** por padrão, e ele **ignora o Dockerfile do repo** — gera um
+> próprio. Isso quebra os três serviços, cada um de um jeito:
+>
+> - **margot**: o Nixpacks roda `go mod download`, que tenta resolver o `replace ../sapienza-kit`
+>   e falha (`open /sapienza-kit/go.mod: no such file or directory`). O nosso Dockerfile compila
+>   com `-mod=vendor` justamente para não buscar o kit: ele já está no `vendor/`.
+> - **core e motor**: falham **em runtime, não no build** — pior de diagnosticar. O boot deles é
+>   o `CMD` do Dockerfile (`db:migrate && pricing:sync && start` / `provision && start`); sem
+>   ele o serviço sobe sem criar o `public`, sem materializar o `pricing.yaml` e sem aplicar as
+>   migrations de tenant.
+> - **todos**: o Nixpacks injeta as envs como `ARG`/`ENV` nas camadas da imagem, então
+>   `PRODUCT_JWT_SECRET`, `MARGOT_ENC_KEY` e as chaves de API ficam legíveis num
+>   `docker history`. Com o Dockerfile próprio, as envs só existem em runtime.
+>
+> Em cada aplicação: **Configuration → Build Pack → Dockerfile** → redeploy.
+
 ### E o `sapienza-kit`?
 
 A plataforma tem **quatro** repos, mas só três serviços: o `sapienza-kit` **não é deployado**.
@@ -81,8 +99,9 @@ No Coolify: **New Resource → Database → PostgreSQL 16**. Nome sugerido: `sap
 
 ## 3. core (primeiro — ele cria o `public`)
 
-**New Resource → Application → GitHub → `sapienza-core`**, branch `master`, build pack
-**Dockerfile**, domínio `https://console.seudominio.com` (o Coolify emite o SSL).
+**New Resource → Application → GitHub → `sapienza-core`**, branch `master`, **Build Pack:
+Dockerfile** (o default é Nixpacks — troque, ver aviso acima), domínio
+`https://console.seudominio.com` (o Coolify emite o SSL).
 
 Envs:
 
@@ -102,8 +121,8 @@ mostra a tela de login.
 
 ## 4. margot
 
-**Application → GitHub → `sapienza-margot`**, `master`, Dockerfile, domínio
-`https://margot.seudominio.com`, porta **8081**.
+**Application → GitHub → `sapienza-margot`**, `master`, **Build Pack: Dockerfile** (com Nixpacks
+o build quebra no `go mod download`), domínio `https://margot.seudominio.com`, porta **8081**.
 
 > Nenhuma configuração para o `sapienza-kit`: ele já está no `vendor/` deste repo e é compilado
 > junto (`go build -mod=vendor`, sem rede). O Coolify não precisa de acesso ao repo do kit.
@@ -143,8 +162,8 @@ Verifique: `curl https://margot.seudominio.com/health`.
 
 ## 5. motor
 
-**Application → GitHub → `sapienza-motor`**, `master`, Dockerfile, domínio
-`https://motor.seudominio.com`, porta **3000**.
+**Application → GitHub → `sapienza-motor`**, `master`, **Build Pack: Dockerfile** (sem ele o
+`provision` não roda no boot), domínio `https://motor.seudominio.com`, porta **3000**.
 
 | Var | Valor |
 |---|---|
@@ -295,6 +314,9 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 
 | Sintoma | Causa provável |
 |---|---|
+| Build da margot falha em `go mod download` com `open /sapienza-kit/go.mod: no such file or directory` | Build Pack está em **Nixpacks**: ele ignora o Dockerfile e tenta baixar o kit em vez de usar o `vendor/`. Troque para **Dockerfile** |
+| Build usa `ghcr.io/railwayapp/nixpacks` no log | idem — o Dockerfile do repo não está sendo usado |
+| Serviço sobe mas o `public`/as tabelas não existem | Nixpacks de novo: sem o `CMD` do Dockerfile, `db:migrate`/`provision` não rodam no boot |
 | Console dá 401 ao abrir Margot/Motor | `PRODUCT_JWT_SECRET` diferente entre os serviços |
 | Mudei o kit, subi a Margot e nada mudou | faltou `go mod vendor` na Margot: o build usa o `vendor/`, não o `replace` local |
 | Cron responde 401 | `WEBHOOK_SECRET` do GitHub ≠ do serviço |
