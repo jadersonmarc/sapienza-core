@@ -7,8 +7,9 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: sapienza
-    ports:
-      - "5432:5432"
+    # Sem `ports:` de propósito — o banco fica só na rede interna do compose. Se
+    # precisar de acesso local (psql/drizzle-studio), use um override e nunca em
+    # produção: a senha aqui é `postgres`.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -24,9 +25,15 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/sapienza
-      AUTH_SECRET: ${AUTH_SECRET:-troque-por-openssl-rand-base64-32}
+      # Fail-closed (`:?`): sem segredo o compose recusa subir. Um default aqui
+      # viraria segredo público — o PRODUCT_JWT_SECRET é o que os data planes usam
+      # p/ validar o JWT, então um valor conhecido permite forjar `tid` e ler o
+      # dado de qualquer tenant. Gere com: openssl rand -base64 32
+      AUTH_SECRET: ${AUTH_SECRET:?defina AUTH_SECRET (openssl rand -base64 32)}
       AUTH_TRUST_HOST: "true"
-      PRODUCT_JWT_SECRET: ${PRODUCT_JWT_SECRET:-troque-por-um-segredo-forte}
+      PRODUCT_JWT_SECRET: ${PRODUCT_JWT_SECRET:?defina PRODUCT_JWT_SECRET (o MESMO valor no core, margot e motor)}
+      # Secret dos jobs agendados (POST /api/cron/billing-close).
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?defina WEBHOOK_SECRET (segredo dos crons)}
       AGENT_TOKEN_ENC_KEY: ${AGENT_TOKEN_ENC_KEY:-}
       NODE_ENV: production
     ports:
