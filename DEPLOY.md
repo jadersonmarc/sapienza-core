@@ -165,6 +165,11 @@ Verifique: `curl https://margot.seudominio.com/health`.
 **Application → GitHub → `sapienza-motor`**, `master`, **Build Pack: Dockerfile** (sem ele o
 `provision` não roda no boot), domínio `https://motor.seudominio.com`, porta **3000**.
 
+> **Health Check: aponte para `/health`.** O Motor é só API (sem página), então `GET /` responde
+> **404** — o health check padrão do Coolify, que bate na raiz, marca o serviço como não-saudável
+> e o domínio **não sobe**. Em **Configuration → Health Check**: path `/health`, porta `3000`.
+> A rota devolve `ok` sem tocar no banco (é liveness). É o mesmo `/health` que a Margot já expõe.
+
 | Var | Valor |
 |---|---|
 | `DATABASE_URL` | a mesma do core |
@@ -270,7 +275,7 @@ pelo middleware e o faturamento não roda — não deixe passar.
 Roteiro mínimo, na ordem:
 
 1. `https://console...` carrega e o login funciona.
-2. `curl https://margot.../health` responde.
+2. `curl https://margot.../health` e `curl https://motor.../health` respondem `ok`.
 3. `\dt tenant_*.*` lista as tabelas dos dois produtos (provisioning funcionou).
 4. Console → o cliente vê **só** os produtos assinados.
 5. **Motor:** conecte o canal blog, crie uma peça, publique. `usage_counters` deve ir a 1.
@@ -317,6 +322,7 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | Build da margot falha em `go mod download` com `open /sapienza-kit/go.mod: no such file or directory` | Build Pack está em **Nixpacks**: ele ignora o Dockerfile e tenta baixar o kit em vez de usar o `vendor/`. Troque para **Dockerfile** |
 | Build usa `ghcr.io/railwayapp/nixpacks` no log | idem — o Dockerfile do repo não está sendo usado |
 | Serviço sobe mas o `public`/as tabelas não existem | Nixpacks de novo: sem o `CMD` do Dockerfile, `db:migrate`/`provision` não rodam no boot |
+| Domínio do motor não sobe / 404 na raiz | Health Check não está em `/health`: o Motor é só API, `GET /` dá 404 e o Coolify o marca não-saudável |
 | Console dá 401 ao abrir Margot/Motor | `PRODUCT_JWT_SECRET` diferente entre os serviços |
 | Mudei o kit, subi a Margot e nada mudou | faltou `go mod vendor` na Margot: o build usa o `vendor/`, não o `replace` local |
 | Cron responde 401 | `WEBHOOK_SECRET` do GitHub ≠ do serviço |
