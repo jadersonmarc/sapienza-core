@@ -2,7 +2,14 @@ import { redirect } from "next/navigation"
 import { currentContext } from "@/lib/console/current"
 import { roleInTenant, tenantSubscriptions } from "@/lib/tenant/context"
 import { issueProductToken } from "@/lib/auth/product-jwt"
-import type { AgentConfig, Conversation, Message, SetupStatus } from "./types"
+import type {
+  AgentConfig,
+  ChannelBinding,
+  Conversation,
+  Message,
+  SetupStatus,
+  WebhookSecret,
+} from "./types"
 
 // BFF do console → API do Margot. Server-only: emite o JWT curto do core
 // (lib/auth/product-jwt) e chama o Margot em MARGOT_API_URL. Todo acesso é escopado
@@ -20,7 +27,7 @@ export class MargotError extends Error {
   }
 }
 
-export type MargotCtx = { tenantId: string; userId: string; role: string }
+export type MargotCtx = { tenantId: string; userId: string; role: string; isSuperadmin: boolean }
 
 function baseUrl(): string {
   return (process.env.MARGOT_API_URL ?? "http://localhost:8081").replace(/\/$/, "")
@@ -34,7 +41,7 @@ export async function margotContext(): Promise<MargotCtx> {
   const subscribed = subs.some((s) => s.produto === "margot" && s.status === "active")
   if (!subscribed) redirect("/")
   const role = user.isSuperadmin ? "owner" : ((await roleInTenant(user.id, active.id)) ?? "member")
-  return { tenantId: active.id, userId: user.id, role }
+  return { tenantId: active.id, userId: user.id, role, isSuperadmin: user.isSuperadmin }
 }
 
 async function call<T>(ctx: MargotCtx, path: string, init?: RequestInit): Promise<T> {
@@ -97,6 +104,19 @@ export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {
 
 export async function putConfig(ctx: MargotCtx, cfg: AgentConfig) {
   return call<{ ok: boolean }>(ctx, "/api/v1/config", { method: "PUT", body: JSON.stringify(cfg) })
+}
+
+/** Vincula (cria/edita) o canal do tenant a uma instância do Evolution. */
+export async function bindChannel(ctx: MargotCtx, binding: ChannelBinding) {
+  return call<{ ok: boolean }>(ctx, "/api/v1/channel", {
+    method: "PUT",
+    body: JSON.stringify(binding),
+  })
+}
+
+/** Gera um novo segredo de webhook para a instância do tenant (mostrado uma vez). */
+export async function rotateWebhookSecret(ctx: MargotCtx): Promise<WebhookSecret> {
+  return call<WebhookSecret>(ctx, "/api/v1/channel/rotate-webhook-secret", { method: "POST" })
 }
 
 export async function getSetup(ctx: MargotCtx): Promise<SetupStatus> {

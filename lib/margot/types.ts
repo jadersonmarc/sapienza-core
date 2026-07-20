@@ -21,6 +21,10 @@ export type Message = {
 }
 
 export type AgentConfig = {
+  // Identidade do canal (vínculo) — read-only aqui; editada via bindChannel.
+  evolution_instance: string
+  whatsapp_number: string
+  // Comportamento do agente — editado via putConfig.
   system_prompt: string
   tone: string
   fallback: string
@@ -29,6 +33,18 @@ export type AgentConfig = {
   driver: string
   dedicated_number_confirmed: boolean
 }
+
+// Vínculo do canal: qual instância do Evolution roteia para o tenant. Setado no
+// onboarding (superadmin Sapienza).
+export type ChannelBinding = {
+  evolution_instance: string
+  whatsapp_number: string
+  driver: string
+  dedicated_number_confirmed: boolean
+}
+
+// Segredo de webhook gerado uma única vez (para colar no Evolution).
+export type WebhookSecret = { instance: string; secret: string; aviso: string }
 
 export type SetupStatus = {
   channel_connected: boolean

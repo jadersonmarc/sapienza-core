@@ -43,40 +43,19 @@ export function ConfigForm({ cfg }: { cfg: AgentConfig }) {
         <input id="fallback" name="fallback" defaultValue={cfg.fallback} className={field} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label className={label} htmlFor="max_tokens">
-            Máx. tokens
-          </label>
-          <input
-            id="max_tokens"
-            name="max_tokens"
-            type="number"
-            min={1}
-            defaultValue={cfg.max_tokens}
-            className={field}
-          />
-        </div>
-        <div className="space-y-1">
-          <label className={label} htmlFor="driver">
-            Driver de WhatsApp
-          </label>
-          <select id="driver" name="driver" defaultValue={cfg.driver || "evolution"} className={field}>
-            <option value="evolution">evolution (padrão)</option>
-            <option value="meta">meta (oficial — plugável)</option>
-          </select>
-        </div>
-      </div>
-
-      <label className="flex items-center gap-2 text-sm">
+      <div className="space-y-1 sm:max-w-[50%]">
+        <label className={label} htmlFor="max_tokens">
+          Máx. tokens
+        </label>
         <input
-          type="checkbox"
-          name="dedicated_number_confirmed"
-          defaultChecked={cfg.dedicated_number_confirmed}
-          className="h-4 w-4"
+          id="max_tokens"
+          name="max_tokens"
+          type="number"
+          min={1}
+          defaultValue={cfg.max_tokens}
+          className={field}
         />
-        Número dedicado confirmado (nunca o número pessoal/principal)
-      </label>
+      </div>
 
       <div className="flex items-center gap-3">
         <button
