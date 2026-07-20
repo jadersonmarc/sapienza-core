@@ -61,15 +61,35 @@ lugares — kit para a Margot, `lib/platform` para o Motor.
 ## 0. Pré-requisitos
 
 - VPS Hostinger com **Coolify** instalado (KVM 2 ou superior; o build do Next consome RAM).
-- DNS apontando para o IP da VPS:
-  - `console.seudominio.com` → core
-  - `margot.seudominio.com` → margot
-  - `motor.seudominio.com` → motor
+- DNS dos três subdomínios apontando para o IP da VPS — ver **Domínios** abaixo.
 - Evolution API já rodando (você já tem) — anote `EVOLUTION_API_URL` e `EVOLUTION_API_KEY`.
 - Os repos no GitHub, na branch `master`. Só três viram aplicação no Coolify (core, margot,
   motor); o `sapienza-kit` é biblioteca e vai dentro da Margot — ver acima.
 - **Opcional:** bucket R2/S3. Só é necessário se for publicar no Instagram ou Threads, que
   exigem imagem. Sem ele o Motor publica em blog/LinkedIn/X/Facebook normalmente.
+
+### Domínios (DNS + Coolify)
+
+São **duas** metades — as duas precisam estar certas, ou o domínio dá 404:
+
+**1. DNS.** No painel onde o domínio é gerenciado (com VPS Hostinger, normalmente o **hPanel →
+Domínios → Zona DNS**; confira os nameservers com `dig +short <domínio> NS`), crie um registro
+**A** por subdomínio, todos apontando para o **IP da VPS** (hPanel → VPS → Overview mostra o IP):
+
+| Tipo | Nome | Aponta para | TTL |
+|---|---|---|---|
+| A | `console` | `<IP-da-VPS>` | 300 |
+| A | `margot` | `<IP-da-VPS>` | 300 |
+| A | `motor` | `<IP-da-VPS>` | 300 |
+
+O campo **Nome** é só o rótulo (`console`), não o domínio inteiro. O **valor** é só o IP — sem
+porta, sem `http://`, sem espaço (um espaço colado junto vira "IPv4 inválido"). Confira a
+propagação: `dig +short console.<domínio> A` deve devolver o IP.
+
+**2. Coolify.** Em cada app, campo **Domains**, a URL pública com **https** (o Coolify emite o
+Let's Encrypt): core → `https://console.<domínio>`, margot → `https://margot.<domínio>`, motor →
+`https://motor.<domínio>`. Depois de setar, **redeploy a app** — o proxy só registra a rota no
+deploy; sem isso ela responde 404 mesmo com o DNS certo.
 
 ## 1. Gere os segredos — uma vez, e guarde
 
@@ -110,10 +130,19 @@ Envs:
 | `DATABASE_URL` | a string interna do passo 2 |
 | `AUTH_SECRET` | do passo 1 |
 | `AUTH_TRUST_HOST` | `true` |
+| `AUTH_URL` | `https://console.<seu-domínio>` — sem ele, o login redireciona para `localhost` depois de autenticar |
 | `PRODUCT_JWT_SECRET` | do passo 1 |
 | `WEBHOOK_SECRET` | do passo 1 |
-| `MARGOT_API_URL` | `http://margot:8081` (rede interna) |
-| `MOTOR_API_URL` | `http://motor:3000` (rede interna) |
+| `MARGOT_API_URL` | `https://margot.<seu-domínio>` — a URL **pública** |
+| `MOTOR_API_URL` | `https://motor.<seu-domínio>` — a URL **pública** |
+
+> **Não use `http://margot:8081` / `http://motor:3000`.** Esses nomes de container só existem em
+> docker-compose; no Coolify cada app é isolada e o container tem nome de UUID, então o core não
+> resolve `motor` e o console dá **500** ("Não foi possível falar com o serviço do Motor"). Use a
+> URL pública `https://…` (a API do produto já é pública e protegida pelo JWT curto do core). O
+> core e o produto no mesmo servidor fazem hairpin pelo proxy — funciona no Coolify; se algum dia
+> der timeout, o plano B é ligar as apps numa rede predefinida do Coolify e usar o nome real do
+> container.
 
 Deploy. O boot roda `db:migrate && pricing:sync && start`: cria o `public`, materializa o
 `pricing.yaml` em `plans`/`product_rules` e sobe o console. Confirme que `https://console...`
@@ -307,8 +336,8 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | `DATABASE_URL` | ✅ | ✅ | ✅ | o MESMO Postgres |
 | `PRODUCT_JWT_SECRET` | ✅ | ✅ | ✅ | **idêntico nos três** |
 | `WEBHOOK_SECRET` | ✅ | — | ✅ | segredo dos crons |
-| `AUTH_SECRET` + `AUTH_TRUST_HOST` | ✅ | — | — | NextAuth |
-| `MARGOT_API_URL` / `MOTOR_API_URL` | ✅ | — | — | BFF do console (rede interna) |
+| `AUTH_SECRET` + `AUTH_TRUST_HOST` + `AUTH_URL` | ✅ | — | — | NextAuth (`AUTH_URL` = URL pública do console) |
+| `MARGOT_API_URL` / `MOTOR_API_URL` | ✅ | — | — | BFF do console — URL **pública** `https://…`, não nome de container |
 | `MARGOT_ENC_KEY` | — | ✅ | — | AES-256-GCM |
 | `MOTOR_ENC_KEY` | — | — | ✅ | AES-256-GCM |
 | `EVOLUTION_API_URL` / `_API_KEY` / `_WEBHOOK_SECRET` | — | ✅ | — | WhatsApp |
@@ -323,7 +352,9 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | Build usa `ghcr.io/railwayapp/nixpacks` no log | idem — o Dockerfile do repo não está sendo usado |
 | Serviço sobe mas o `public`/as tabelas não existem | Nixpacks de novo: sem o `CMD` do Dockerfile, `db:migrate`/`provision` não rodam no boot |
 | Domínio do motor não sobe / 404 na raiz | Health Check não está em `/health`: o Motor é só API, `GET /` dá 404 e o Coolify o marca não-saudável |
+| Console dá **500** "Não foi possível falar com o serviço do Motor/Margot" | `MOTOR_API_URL`/`MARGOT_API_URL` ausente ou usando nome de container (`motor:3000`), que não resolve no Coolify — use a URL pública `https://…` e redeploy o core |
 | Console dá 401 ao abrir Margot/Motor | `PRODUCT_JWT_SECRET` diferente entre os serviços |
+| Login volta para `localhost` depois de autenticar | falta `AUTH_URL=https://console.<domínio>` no core |
 | Mudei o kit, subi a Margot e nada mudou | faltou `go mod vendor` na Margot: o build usa o `vendor/`, não o `replace` local |
 | Cron responde 401 | `WEBHOOK_SECRET` do GitHub ≠ do serviço |
 | Cron responde 3xx | rota capturada pelo middleware — o faturamento não está rodando |
