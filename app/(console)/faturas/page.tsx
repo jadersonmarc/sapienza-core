@@ -7,6 +7,14 @@ import { BillingForm } from "./billing-form"
 
 type Line = { produto: string; tier: string; count: number; incluso: number; excedente: number; subtotal: number }
 
+const STATUS: Record<string, { label: string; cls: string }> = {
+  paid: { label: "Paga", cls: "bg-primary/15 text-primary" },
+  overdue: { label: "Vencida", cls: "bg-destructive/15 text-destructive" },
+  issued: { label: "Em aberto", cls: "bg-muted text-muted-foreground" },
+  open: { label: "Em aberto", cls: "bg-muted text-muted-foreground" },
+  void: { label: "Cancelada", cls: "bg-muted text-muted-foreground" },
+}
+
 export default async function FaturasPage() {
   const { active } = await currentContext()
   if (!active) return null
@@ -35,13 +43,33 @@ export default async function FaturasPage() {
         <div className="space-y-4">
           {invoices.map((inv) => {
             const lines = (inv.lines as Line[]) ?? []
+            const st = STATUS[inv.status] ?? STATUS.issued
+            const payable = inv.paymentUrl && inv.status !== "paid" && inv.status !== "void"
             return (
               <div key={inv.id} className="rounded-xl border border-border p-5">
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-sm">{inv.period}</span>
-                  <span className="font-display text-lg font-semibold">
-                    R$ {Number(inv.totalBrl).toFixed(2)}
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm">{inv.period}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${st.cls}`}>{st.label}</span>
+                    {inv.dueDate && inv.status !== "paid" && (
+                      <span className="text-xs text-muted-foreground">vence {String(inv.dueDate)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display text-lg font-semibold">
+                      R$ {Number(inv.totalBrl).toFixed(2)}
+                    </span>
+                    {payable && (
+                      <a
+                        href={inv.paymentUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground"
+                      >
+                        Pagar
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <table className="mt-3 w-full text-sm">
                   <thead className="text-muted-foreground">

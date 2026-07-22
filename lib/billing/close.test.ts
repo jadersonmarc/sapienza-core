@@ -106,4 +106,46 @@ maybe("closeTenantInvoice", () => {
       SELECT provider_charge_id FROM public.invoices WHERE tenant_id=${t.id}::uuid AND period='2026-07'`
     expect(inv.provider_charge_id).toBeNull()
   })
+
+  // Reconciliação do webhook: vencido bloqueia, pago destrava.
+  it("webhook: overdue → fatura overdue + assinatura past_due; received → paga + reativa", async () => {
+    const { applyPaymentReceived, applyPaymentOverdue } = await import("@/lib/billing/reconcile")
+    const [t] = await raw<{ id: string }[]>`
+      INSERT INTO public.tenants (name, slug, asaas_customer_id) VALUES ('Recon','recon','cus_r') RETURNING id`
+    await raw`INSERT INTO public.subscriptions (tenant_id, produto, tier, status, activated_at)
+              VALUES (${t.id}::uuid,'margot','pro','active','2026-06-01')`
+    // fatura com cobrança (simula emissão)
+    const [inv] = await raw<{ id: string }[]>`
+      INSERT INTO public.invoices (tenant_id, period, status, lines, total_brl, provider_charge_id)
+      VALUES (${t.id}::uuid,'2026-06','issued','[]'::jsonb, 700, 'pay_r') RETURNING id`
+
+    // vencido → overdue + past_due (bloqueia o produto)
+    expect(await applyPaymentOverdue("pay_r", inv.id)).toBe(true)
+    let sub = (await raw<{ status: string }[]>`SELECT status FROM public.subscriptions WHERE tenant_id=${t.id}::uuid`)[0]
+    let iv = (await raw<{ status: string }[]>`SELECT status FROM public.invoices WHERE id=${inv.id}::uuid`)[0]
+    expect(sub.status).toBe("past_due")
+    expect(iv.status).toBe("overdue")
+
+    // pago → paid + reativa (destrava)
+    expect(await applyPaymentReceived("pay_r", inv.id)).toBe(true)
+    sub = (await raw<{ status: string }[]>`SELECT status FROM public.subscriptions WHERE tenant_id=${t.id}::uuid`)[0]
+    iv = (await raw<{ status: string; paid_at: string | null }[]>`SELECT status, paid_at FROM public.invoices WHERE id=${inv.id}::uuid`)[0]
+    expect(sub.status).toBe("active")
+    expect(iv.status).toBe("paid")
+
+    // idempotente: repetir o received não quebra
+    expect(await applyPaymentReceived("pay_r", inv.id)).toBe(true)
+  })
+
+  it("webhook: token errado → 401", async () => {
+    process.env.ASAAS_WEBHOOK_TOKEN = "tok"
+    const { POST } = await import("@/app/api/webhooks/asaas/route")
+    const req = new Request("http://x/api/webhooks/asaas", {
+      method: "POST",
+      headers: { "content-type": "application/json", "asaas-access-token": "errado" },
+      body: JSON.stringify({ event: "PAYMENT_RECEIVED", payment: { id: "x" } }),
+    })
+    const res = await POST(req)
+    expect(res.status).toBe(401)
+  })
 })

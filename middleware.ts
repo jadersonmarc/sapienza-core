@@ -10,5 +10,6 @@ export const config = {
   // `x-webhook-secret` e se protege sozinho via cronAuthorized() (fail-closed).
   // `health` fica de fora para responder 200 ao health check do Coolify em vez de
   // redirecionar para /login. Dentro do matcher, o callback authorized() faria 307.
-  matcher: ["/((?!api/auth|api/cron|health|_next/static|_next/image|favicon.ico|login|logo-sapienza.png).*)"],
+  // `api/webhooks` (pagamento) também: sem sessão, se protege pelo token do provedor.
+  matcher: ["/((?!api/auth|api/cron|api/webhooks|health|_next/static|_next/image|favicon.ico|login|logo-sapienza.png).*)"],
 }
