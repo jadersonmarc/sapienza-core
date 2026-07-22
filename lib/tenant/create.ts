@@ -27,7 +27,13 @@ function generatePassword(): string {
   return "Sap" + randomBytes(9).toString("base64url") + "9"
 }
 
-export async function createTenant(input: { name: string; ownerEmail: string }): Promise<CreatedTenant> {
+export async function createTenant(input: {
+  name: string
+  ownerEmail: string
+  // Senha escolhida pelo cliente (checkout). Sem ela, geramos uma inicial forte
+  // (fluxo superadmin). Validada por quem passa (o checkout usa validatePasswordStrength).
+  ownerPassword?: string
+}): Promise<CreatedTenant> {
   const name = input.name.trim()
   const ownerEmail = input.ownerEmail.trim().toLowerCase()
   if (!name) throw new Error("nome do cliente é obrigatório")
@@ -35,7 +41,7 @@ export async function createTenant(input: { name: string; ownerEmail: string }):
   const slug = slugify(name)
   if (!slug) throw new Error("nome inválido (slug vazio)")
 
-  const ownerPassword = generatePassword()
+  const ownerPassword = input.ownerPassword ?? generatePassword()
   const hash = await bcrypt.hash(ownerPassword, 12)
 
   const tenantId = await db.transaction(async (tx) => {

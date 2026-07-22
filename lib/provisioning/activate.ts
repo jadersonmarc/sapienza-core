@@ -29,12 +29,17 @@ export async function activateSubscription(args: {
   produto: ProdutoId
   tier: string
   hardCap?: boolean
+  // Estado inicial. Default 'active' (superadmin). O checkout passa 'past_due':
+  // provisiona schema + eventos, mas o gating bloqueia até o pagamento (o webhook
+  // reativa para 'active').
+  status?: "active" | "past_due" | "trialing"
 }): Promise<{ schema: string }> {
   const schema = schemaName(args.tenantId)
   // Segurança: só aceitamos o nome derivado do uuid (evita DDL injection).
   if (!/^tenant_[0-9a-f]{32}$/.test(schema)) {
     throw new Error(`tenantId inválido: ${args.tenantId}`)
   }
+  const status = args.status ?? "active"
 
   // Bloqueio de downgrade por seats: se esta mudança de tier reduzir o MAIOR tier
   // ativo do tenant abaixo do necessário para os usuários atuais, recusar (o owner
@@ -44,9 +49,9 @@ export async function activateSubscription(args: {
   await db.transaction(async (tx) => {
     await tx.execute(sql`
       INSERT INTO public.subscriptions (tenant_id, produto, tier, status, hard_cap)
-      VALUES (${args.tenantId}::uuid, ${args.produto}, ${args.tier}, 'active', ${args.hardCap ?? false})
+      VALUES (${args.tenantId}::uuid, ${args.produto}, ${args.tier}, ${status}::subscription_status, ${args.hardCap ?? false})
       ON CONFLICT (tenant_id, produto)
-      DO UPDATE SET tier = EXCLUDED.tier, status = 'active',
+      DO UPDATE SET tier = EXCLUDED.tier, status = EXCLUDED.status,
                     hard_cap = EXCLUDED.hard_cap, updated_at = now()
     `)
 

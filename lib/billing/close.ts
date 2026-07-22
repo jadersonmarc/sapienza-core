@@ -46,6 +46,16 @@ export async function closeTenantInvoice(tenantId: string, period: Period): Prom
 }> {
   const at = periodEnd(period)
 
+  // Fatura já paga é final — não recomputa nem re-cobra. Protege a fatura de
+  // ativação do checkout (mesmo período) de ser sobrescrita pelo fechamento mensal.
+  const paidRows = (await db.execute(sql`
+    SELECT total_brl, lines FROM public.invoices
+     WHERE tenant_id = ${tenantId}::uuid AND period = ${period} AND status = 'paid'
+  `)) as unknown as { total_brl: string; lines: InvoiceLineOut[] }[]
+  if (paidRows.length > 0) {
+    return { total: Number(paidRows[0].total_brl), lines: paidRows[0].lines ?? [] }
+  }
+
   const rows = (await db.execute(sql`
     SELECT s.tenant_id, s.produto, s.tier, s.activated_at,
            p.mensal, p.incluso, p.excedente_unitario, p.piso, p.metric,
