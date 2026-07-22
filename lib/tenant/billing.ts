@@ -35,7 +35,7 @@ export async function getBillingIdentity(tenantId: string): Promise<BillingIdent
 export async function saveBillingIdentity(
   tenantId: string,
   input: { legalName: string; taxId: string; billingEmail: string },
-): Promise<void> {
+): Promise<{ customerCreated: boolean }> {
   const legalName = input.legalName.trim()
   const taxId = input.taxId.replace(/\D/g, "") // só dígitos
   const billingEmail = input.billingEmail.trim()
@@ -47,14 +47,18 @@ export async function saveBillingIdentity(
 
   // Cria/atualiza no provedor (se configurado). Reusa o customer id existente.
   let asaasCustomerId = current.asaasCustomerId
+  let customerCreated = false
   const provider = paymentProvider()
   if (provider.configured()) {
     const { id } = await provider.upsertCustomer({ name: legalName, taxId, email: billingEmail })
     asaasCustomerId = id
+    customerCreated = true
   }
 
   await db
     .update(schema.tenants)
     .set({ legalName, taxId, billingEmail, asaasCustomerId, updatedAt: new Date() })
     .where(eq(schema.tenants.id, tenantId))
+
+  return { customerCreated }
 }

@@ -52,8 +52,9 @@ export function BillingForm({ identity }: { identity: BillingIdentity }) {
             {pending ? "Salvando…" : "Salvar dados de cobrança"}
           </button>
           {state.error && <span className="text-sm text-destructive">{state.error}</span>}
-          {state.ok && <span className="text-sm text-muted-foreground">Salvo.</span>}
+          {state.ok && !state.warn && <span className="text-sm text-muted-foreground">Salvo.</span>}
         </div>
+        {state.warn && <p className="text-sm text-amber-600 dark:text-amber-500">{state.warn}</p>}
       </form>
     </div>
   )
