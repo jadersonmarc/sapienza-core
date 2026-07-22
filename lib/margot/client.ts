@@ -5,8 +5,10 @@ import { issueProductToken } from "@/lib/auth/product-jwt"
 import type {
   AgentConfig,
   ChannelBinding,
+  ChannelStatus,
   Conversation,
   Message,
+  QRResponse,
   SetupStatus,
   WebhookSecret,
 } from "./types"
@@ -117,6 +119,16 @@ export async function bindChannel(ctx: MargotCtx, binding: ChannelBinding) {
 /** Gera um novo segredo de webhook para a instância do tenant (mostrado uma vez). */
 export async function rotateWebhookSecret(ctx: MargotCtx): Promise<WebhookSecret> {
   return call<WebhookSecret>(ctx, "/api/v1/channel/rotate-webhook-secret", { method: "POST" })
+}
+
+/** Provisiona a instância do WhatsApp e devolve o QR para escanear (self-serve). */
+export async function connectChannel(ctx: MargotCtx): Promise<QRResponse> {
+  return call<QRResponse>(ctx, "/api/v1/channel/connect", { method: "POST" })
+}
+
+/** Estado da conexão do WhatsApp (o console faz polling durante o onboarding). */
+export async function channelStatus(ctx: MargotCtx): Promise<ChannelStatus> {
+  return call<ChannelStatus>(ctx, "/api/v1/channel/status")
 }
 
 export async function getSetup(ctx: MargotCtx): Promise<SetupStatus> {

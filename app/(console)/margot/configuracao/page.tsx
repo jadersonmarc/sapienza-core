@@ -1,22 +1,27 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { margotContext, getConfig, MargotError } from "@/lib/margot/client"
-import type { AgentConfig } from "@/lib/margot/types"
+import { margotContext, getConfig, channelStatus, MargotError } from "@/lib/margot/client"
+import type { AgentConfig, ChannelStatus } from "@/lib/margot/types"
 import { ConfigForm } from "./config-form"
-import { ChannelForm } from "./channel-form"
+import { ConnectPanel } from "./connect-panel"
 
 export default async function ConfiguracaoPage() {
   const ctx = await margotContext()
+  const canManage = ctx.role === "owner" || ctx.role === "admin"
 
+  let status: ChannelStatus = { connected: false, state: "none", number: "" }
   let cfg: AgentConfig | null = null
-  let noChannel = false
   let unavailable: string | null = null
   try {
-    cfg = await getConfig(ctx)
+    status = await channelStatus(ctx)
+    // getConfig 404 antes do canal existir — o agente só se configura depois de conectar.
+    try {
+      cfg = await getConfig(ctx)
+    } catch (e) {
+      if (!(e instanceof MargotError && e.status === 404)) throw e
+    }
   } catch (e) {
-    // 404 = canal ainda não vinculado (estado de onboarding), não indisponibilidade.
-    if (e instanceof MargotError && e.status === 404) noChannel = true
-    else unavailable = e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível"
+    unavailable = e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
 
   return (
@@ -35,31 +40,18 @@ export default async function ConfiguracaoPage() {
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
       ) : (
         <div className="space-y-8">
-          {/* Vínculo do canal — só superadmin Sapienza. Cria (noChannel) ou edita. */}
-          {ctx.isSuperadmin ? (
-            <ChannelForm cfg={cfg} />
-          ) : (
-            noChannel && (
-              <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">
-                Canal ainda não vinculado pela Sapienza. Assim que o WhatsApp for conectado, a
-                configuração do agente fica disponível aqui.
-              </p>
-            )
-          )}
+          <ConnectPanel initialStatus={status} canManage={canManage} />
 
-          {/* Configuração do agente — owner/admin. Só quando o canal já existe. */}
+          {/* A configuração do agente aparece assim que o canal existe (após conectar). */}
           {cfg ? (
             <div className="space-y-3">
               <h2 className="text-sm font-semibold">Comportamento do agente</h2>
               <ConfigForm cfg={cfg} />
             </div>
           ) : (
-            ctx.isSuperadmin &&
-            noChannel && (
-              <p className="text-sm text-muted-foreground">
-                Vincule o canal acima para liberar a configuração do agente.
-              </p>
-            )
+            <p className="text-sm text-muted-foreground">
+              Conecte o WhatsApp acima para configurar o comportamento do agente.
+            </p>
           )}
         </div>
       )}

@@ -46,6 +46,10 @@ export type ChannelBinding = {
 // Segredo de webhook gerado uma única vez (para colar no Evolution).
 export type WebhookSecret = { instance: string; secret: string; aviso: string }
 
+// Onboarding self-serve por QR.
+export type QRResponse = { qr_base64: string }
+export type ChannelStatus = { connected: boolean; state: string; number: string }
+
 export type SetupStatus = {
   channel_connected: boolean
   agent_configured: boolean

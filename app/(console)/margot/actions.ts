@@ -8,6 +8,7 @@ import {
   putConfig,
   bindChannel,
   rotateWebhookSecret,
+  connectChannel,
   MargotError,
 } from "@/lib/margot/client"
 import type { AgentConfig, ChannelBinding } from "@/lib/margot/types"
@@ -15,6 +16,8 @@ import type { AgentConfig, ChannelBinding } from "@/lib/margot/types"
 export type ActionState = { ok?: boolean; error?: string }
 // Estado do vínculo do canal — carrega o segredo do webhook quando gerado (uma vez).
 export type ChannelActionState = { ok?: boolean; error?: string; secret?: string; instance?: string }
+// Estado da conexão por QR — carrega o QR quando gerado.
+export type ConnectState = { qr?: string; error?: string }
 
 export async function sendMessageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
@@ -81,6 +84,22 @@ export async function bindChannelAction(
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MargotError ? e.message : "falha ao vincular canal" }
+  }
+}
+
+// Conecta o WhatsApp (self-serve, owner/admin): provisiona a instância no
+// Evolution e devolve o QR para escanear. O componente client faz o polling do
+// status depois disto.
+export async function connectChannelAction(
+  _prev: ConnectState,
+  _formData: FormData,
+): Promise<ConnectState> {
+  try {
+    const ctx = await margotContext()
+    const r = await connectChannel(ctx)
+    return { qr: r.qr_base64 }
+  } catch (e) {
+    return { error: e instanceof MargotError ? e.message : "falha ao conectar o WhatsApp" }
   }
 }
 
