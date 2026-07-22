@@ -4,6 +4,7 @@ import {
   uuid,
   text,
   timestamp,
+  date,
   jsonb,
   boolean,
   integer,
@@ -27,7 +28,7 @@ export const subscriptionStatus = pgEnum("subscription_status", [
   "canceled",
 ])
 export const billingCycle = pgEnum("billing_cycle", ["mensal"])
-export const invoiceStatus = pgEnum("invoice_status", ["open", "issued", "paid", "void"])
+export const invoiceStatus = pgEnum("invoice_status", ["open", "issued", "paid", "void", "overdue"])
 
 // ── tenants (identidade canônica do cliente na plataforma) ───────────────────
 export const tenants = pgTable("tenants", {
@@ -128,6 +129,11 @@ export const invoices = pgTable("invoices", {
   // linhas: [{ produto, tier, mensal, incluso, count, excedente, subtotal }]
   lines: jsonb("lines").notNull().default([]),
   totalBrl: numeric("total_brl", { precision: 12, scale: 2 }).notNull(),
+  // Pagamento (provedor): id da cobrança, link Pix/boleto, vencimento, pago em.
+  providerChargeId: text("provider_charge_id"),
+  paymentUrl: text("payment_url"),
+  dueDate: date("due_date"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("invoices_tenant_period_idx").on(t.tenantId, t.period),
