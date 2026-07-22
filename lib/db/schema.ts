@@ -34,6 +34,11 @@ export const tenants = pgTable("tenants", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   slug: text("slug").notNull(),
+  // Identidade de cobrança (para emitir Pix/boleto no provedor de pagamento).
+  legalName: text("legal_name"),
+  taxId: text("tax_id"), // CPF/CNPJ (só dígitos)
+  billingEmail: text("billing_email"),
+  asaasCustomerId: text("asaas_customer_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("tenants_slug_idx").on(t.slug)])

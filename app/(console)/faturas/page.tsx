@@ -1,7 +1,9 @@
 import { desc, eq } from "drizzle-orm"
 import { currentContext } from "@/lib/console/current"
 import { db, schema } from "@/lib/db"
+import { getBillingIdentity } from "@/lib/tenant/billing"
 import { Eyebrow } from "@/components/eyebrow"
+import { BillingForm } from "./billing-form"
 
 type Line = { produto: string; tier: string; count: number; incluso: number; excedente: number; subtotal: number }
 
@@ -9,11 +11,14 @@ export default async function FaturasPage() {
   const { active } = await currentContext()
   if (!active) return null
 
-  const invoices = await db
-    .select()
-    .from(schema.invoices)
-    .where(eq(schema.invoices.tenantId, active.id))
-    .orderBy(desc(schema.invoices.period))
+  const [invoices, identity] = await Promise.all([
+    db
+      .select()
+      .from(schema.invoices)
+      .where(eq(schema.invoices.tenantId, active.id))
+      .orderBy(desc(schema.invoices.period)),
+    getBillingIdentity(active.id),
+  ])
 
   return (
     <div className="space-y-6">
@@ -21,6 +26,8 @@ export default async function FaturasPage() {
         <Eyebrow>{active.name}</Eyebrow>
         <h1 className="font-display text-2xl font-semibold tracking-tight">Faturas</h1>
       </div>
+
+      <BillingForm identity={identity} />
 
       {invoices.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhuma fatura emitida ainda.</p>
