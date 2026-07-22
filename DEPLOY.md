@@ -162,20 +162,19 @@ o build quebra no `go mod download`), domínio `https://margot.seudominio.com`, 
 | `PRODUCT_JWT_SECRET` | **o mesmo do core** |
 | `PORT` | `8081` |
 | `MARGOT_ENC_KEY` | do passo 1 |
-| `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` | da sua Evolution |
-| `EVOLUTION_WEBHOOK_SECRET` | do passo 1 |
+| `EVOLUTION_API_URL` / `EVOLUTION_API_KEY` | da sua Evolution — a `_KEY` é a apikey **global** (envia E cria/gere instâncias) |
+| `MARGOT_PUBLIC_URL` | `https://margot.<domínio>` — destino de webhook que a Margot registra no Evolution ao criar a instância |
+| `EVOLUTION_WEBHOOK_SECRET` | do passo 1 (segredo global de fallback) |
 | `ANTHROPIC_API_KEY` | sua chave (sem ela o bot só responde o fallback do tenant) |
 
-Depois do deploy, configure o webhook na Evolution apontando para:
+**Onboarding do cliente é self-serve, por QR** — não precisa mexer no Manager do Evolution nem
+configurar webhook à mão. No console, em **Margot → Configurar agente**, o owner/admin do tenant
+clica **"Conectar WhatsApp"**: a Margot cria a instância no Evolution (nome derivado do tenant),
+registra o webhook (`MARGOT_PUBLIC_URL` + `/webhook/evolution`) com um segredo próprio gerado na
+hora, e mostra o **QR** no console. O cliente escaneia com o número **dedicado** e pronto.
 
-```
-POST https://margot.seudominio.com/webhook/evolution
-header: apikey: <EVOLUTION_WEBHOOK_SECRET>
-evento: messages.upsert
-```
-
-`EVOLUTION_WEBHOOK_SECRET` é o segredo **global**, o padrão para quem ainda não tem o seu. Sem
-ele (e sem segredo de tenant) o webhook recusa tudo — é fail-closed de propósito.
+`EVOLUTION_WEBHOOK_SECRET` é o segredo **global**, fallback para instâncias que ainda não têm o
+seu. Vazio (e sem segredo de tenant) o webhook recusa tudo — fail-closed de propósito.
 
 > **Dê a cada tenant um segredo próprio.** Com o global, quem o tiver consegue forjar um payload
 > em nome de qualquer instância — injetando mensagem no schema daquele cliente e gastando seu
@@ -341,6 +340,7 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | `MARGOT_ENC_KEY` | — | ✅ | — | AES-256-GCM |
 | `MOTOR_ENC_KEY` | — | — | ✅ | AES-256-GCM |
 | `EVOLUTION_API_URL` / `_API_KEY` / `_WEBHOOK_SECRET` | — | ✅ | — | WhatsApp |
+| `MARGOT_PUBLIC_URL` | — | ✅ | — | destino do webhook no onboarding por QR |
 | `ANTHROPIC_API_KEY` | — | ✅ | ✅ | IA |
 | `S3_*` | — | — | opcional | só p/ Instagram/Threads |
 
