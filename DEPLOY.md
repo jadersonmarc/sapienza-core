@@ -136,6 +136,7 @@ Envs:
 | `MARGOT_API_URL` | `https://margot.<seu-domínio>` — a URL **pública** |
 | `MOTOR_API_URL` | `https://motor.<seu-domínio>` — a URL **pública** |
 | `ASAAS_API_KEY` / `ASAAS_BASE_URL` / `ASAAS_WEBHOOK_TOKEN` | pagamentos (Pix/boleto). **Sandbox** primeiro (`ASAAS_BASE_URL=https://sandbox.asaas.com/api/v3`); sem eles as faturas são calculadas mas não geram cobrança |
+| `CHECKOUT_SECRET` | `openssl rand -base64 32`. Autoriza o checkout self-service do site (`POST /api/public/checkout`). **O mesmo valor** deve ir na app do site (`spa-sapienza`: `CHECKOUT_SECRET` + `CORE_CHECKOUT_URL=https://console.<seu-domínio>/api/public/checkout`). Sem ele a rota recusa tudo (401) |
 
 > **Não use `http://margot:8081` / `http://motor:3000`.** Esses nomes de container só existem em
 > docker-compose; no Coolify cada app é isolada e o container tem nome de UUID, então o core não
