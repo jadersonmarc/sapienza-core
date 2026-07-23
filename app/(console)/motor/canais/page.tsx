@@ -61,6 +61,13 @@ export default async function CanaisPage() {
           )}
 
           {setup && <ConnectForm options={setup.available} />}
+
+          <p className="text-sm text-muted-foreground">
+            Não sabe onde pegar os tokens?{" "}
+            <Link href="/motor/canais/guia" className="text-primary hover:underline">
+              Veja o guia de cada canal →
+            </Link>
+          </p>
         </>
       )}
     </div>
