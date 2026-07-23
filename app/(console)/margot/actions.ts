@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import {
   margotContext,
   sendMessage,
+  suggestReply,
   handoff,
   putConfig,
   bindChannel,
@@ -73,6 +74,15 @@ export async function deleteAutomationAction(id: string): Promise<void> {
   const ctx = await margotContext()
   await deleteAutomation(ctx, id)
   revalidatePath("/margot/automacoes")
+}
+
+export async function suggestReplyAction(convId: string): Promise<{ suggestion?: string; error?: string }> {
+  try {
+    const ctx = await margotContext()
+    return { suggestion: await suggestReply(ctx, convId) }
+  } catch (e) {
+    return { error: e instanceof MargotError ? e.message : "falha ao gerar sugestão" }
+  }
 }
 
 export async function handoffAction(formData: FormData): Promise<void> {

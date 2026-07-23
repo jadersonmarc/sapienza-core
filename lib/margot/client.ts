@@ -113,6 +113,13 @@ export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {
   return call<AgentConfig>(ctx, "/api/v1/config")
 }
 
+export async function suggestReply(ctx: MargotCtx, convId: string): Promise<string> {
+  const r = await call<{ suggestion: string }>(ctx, `/api/v1/conversations/${convId}/suggest`, {
+    method: "POST",
+  })
+  return r.suggestion
+}
+
 // ── CRM / funil de leads ─────────────────────────────────────────────────────
 
 export async function listContacts(ctx: MargotCtx, params: { stage_id?: string } = {}): Promise<Contact[]> {
