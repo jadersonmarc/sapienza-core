@@ -37,6 +37,31 @@ export type Stage = {
   count: number
 }
 
+// Automações do atendimento (regras avaliadas antes da IA).
+export type AutomationType = "off_hours" | "welcome" | "keyword"
+
+export type AutomationTrigger = {
+  keywords?: string[]
+  timezone?: string
+  weekdays?: number[]
+  start?: string
+  end?: string
+}
+
+export type AutomationAction = {
+  reply?: string
+  handoff?: boolean
+}
+
+export type Automation = {
+  id: string
+  type: AutomationType
+  trigger: AutomationTrigger
+  action: AutomationAction
+  enabled: boolean
+  position: number
+}
+
 export type AgentConfig = {
   // Identidade do canal (vínculo) — read-only aqui; editada via bindChannel.
   evolution_instance: string

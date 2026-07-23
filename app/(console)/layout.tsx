@@ -28,6 +28,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
               { href: "/margot/atendimento", label: "Atendimento" },
               { href: "/margot/crm", label: "Funil" },
               { href: "/margot/configuracao", label: "Agente" },
+              { href: "/margot/automacoes", label: "Automações" },
             ],
           } as NavEntry,
         ]

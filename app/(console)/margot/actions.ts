@@ -11,6 +11,10 @@ import {
   connectChannel,
   patchContact,
   deleteContact,
+  createAutomation,
+  updateAutomation,
+  deleteAutomation,
+  type AutomationInput,
   MargotError,
 } from "@/lib/margot/client"
 import type { AgentConfig, ChannelBinding } from "@/lib/margot/types"
@@ -48,6 +52,27 @@ export async function deleteContactAction(id: string): Promise<void> {
   const ctx = await margotContext()
   await deleteContact(ctx, id)
   revalidatePath("/margot/crm")
+}
+
+export async function saveAutomationAction(
+  input: AutomationInput & { id?: string },
+): Promise<{ error?: string }> {
+  try {
+    const ctx = await margotContext()
+    const { id, ...body } = input
+    if (id) await updateAutomation(ctx, id, body)
+    else await createAutomation(ctx, body)
+    revalidatePath("/margot/automacoes")
+    return {}
+  } catch (e) {
+    return { error: e instanceof MargotError ? e.message : "falha ao salvar automação" }
+  }
+}
+
+export async function deleteAutomationAction(id: string): Promise<void> {
+  const ctx = await margotContext()
+  await deleteAutomation(ctx, id)
+  revalidatePath("/margot/automacoes")
 }
 
 export async function handoffAction(formData: FormData): Promise<void> {

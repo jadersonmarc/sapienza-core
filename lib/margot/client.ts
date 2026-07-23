@@ -4,6 +4,10 @@ import { roleInTenant, tenantSubscriptions } from "@/lib/tenant/context"
 import { issueProductToken } from "@/lib/auth/product-jwt"
 import type {
   AgentConfig,
+  Automation,
+  AutomationAction,
+  AutomationTrigger,
+  AutomationType,
   ChannelBinding,
   ChannelStatus,
   Contact,
@@ -135,6 +139,33 @@ export async function patchContact(
 
 export async function deleteContact(ctx: MargotCtx, id: string) {
   return call<{ ok: boolean }>(ctx, `/api/v1/contacts/${id}`, { method: "DELETE" })
+}
+
+// ── Automações ───────────────────────────────────────────────────────────────
+
+export type AutomationInput = {
+  type: AutomationType
+  trigger: AutomationTrigger
+  action: AutomationAction
+  enabled: boolean
+  position: number
+}
+
+export async function listAutomations(ctx: MargotCtx): Promise<Automation[]> {
+  const r = await call<{ automations: Automation[] | null }>(ctx, "/api/v1/automations")
+  return r.automations ?? []
+}
+
+export async function createAutomation(ctx: MargotCtx, body: AutomationInput) {
+  return call<{ id: string }>(ctx, "/api/v1/automations", { method: "POST", body: JSON.stringify(body) })
+}
+
+export async function updateAutomation(ctx: MargotCtx, id: string, body: AutomationInput) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/automations/${id}`, { method: "PUT", body: JSON.stringify(body) })
+}
+
+export async function deleteAutomation(ctx: MargotCtx, id: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/automations/${id}`, { method: "DELETE" })
 }
 
 export async function putConfig(ctx: MargotCtx, cfg: AgentConfig) {
