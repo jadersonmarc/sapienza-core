@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm"
 import { currentContext } from "@/lib/console/current"
 import { db, schema } from "@/lib/db"
 import { getBillingIdentity } from "@/lib/tenant/billing"
+import { tierLabel } from "@/lib/pricing/tier-label"
 import { Eyebrow } from "@/components/eyebrow"
 import { BillingForm } from "./billing-form"
 
@@ -85,7 +86,7 @@ export default async function FaturasPage() {
                     {lines.map((l, i) => (
                       <tr key={i} className="border-t border-border">
                         <td className="py-1">{l.produto}</td>
-                        <td className="py-1 font-mono text-xs">{l.tier}</td>
+                        <td className="py-1 font-mono text-xs">{tierLabel(l.tier)}</td>
                         <td className="py-1 text-right">{l.count}/{l.incluso}</td>
                         <td className="py-1 text-right">R$ {Number(l.excedente).toFixed(2)}</td>
                         <td className="py-1 text-right">R$ {Number(l.subtotal).toFixed(2)}</td>

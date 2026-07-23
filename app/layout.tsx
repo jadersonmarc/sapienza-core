@@ -12,6 +12,14 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], 
 export const metadata: Metadata = {
   title: "Sapienza — Console",
   description: "Console operacional único da plataforma Sapienza SaaS.",
+  // Mesma logo/favicon do site (spa-sapienza) na aba do navegador.
+  icons: {
+    icon: [
+      { url: "/icon-32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: { url: "/apple-icon.png", sizes: "180x180" },
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

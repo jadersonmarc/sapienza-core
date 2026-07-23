@@ -44,9 +44,9 @@ export function ActivateForm({ tenants }: { tenants: { id: string; name: string 
               Plano
             </label>
             <select id="tier" name="tier" className={field} defaultValue="start">
-              <option value="start">start</option>
-              <option value="pro">pro</option>
-              <option value="scale">scale</option>
+              <option value="start">Start</option>
+              <option value="pro">Pro</option>
+              <option value="scale">Premium</option>
             </select>
           </div>
         </div>

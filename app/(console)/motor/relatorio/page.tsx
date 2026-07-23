@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listContent, MotorError } from "@/lib/motor/client"
 import { motorMonthlyBilling, motorInvoiceHistory, currentPeriod } from "@/lib/motor/report"
+import { tierLabel } from "@/lib/pricing/tier-label"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -74,7 +75,7 @@ export default async function RelatorioPage() {
         <div className="space-y-3">
           <h2 className="text-sm font-medium text-muted-foreground">Faturamento (peças publicadas)</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Plano" value={billing.tier} hint={`${brl(billing.mensal)}/mês`} />
+            <Stat label="Plano" value={tierLabel(billing.tier)} hint={`${brl(billing.mensal)}/mês`} />
             <Stat
               label="Peças publicadas"
               value={`${billing.count}`}
@@ -120,7 +121,7 @@ export default async function RelatorioPage() {
                 {invoices.map((inv) => (
                   <tr key={inv.period} className="border-t border-border">
                     <td className="px-4 py-2 font-mono text-xs">{inv.period}</td>
-                    <td className="px-4 py-2">{inv.tier}</td>
+                    <td className="px-4 py-2">{tierLabel(inv.tier)}</td>
                     <td className="px-4 py-2 text-right">
                       {inv.count}/{inv.incluso}
                     </td>

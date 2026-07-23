@@ -1,4 +1,5 @@
 import { currentContext, subscribedProducts } from "@/lib/console/current"
+import { tierLabel } from "@/lib/pricing/tier-label"
 import { Eyebrow } from "@/components/eyebrow"
 
 // Home do console: só os produtos que o tenant ATIVO assina, com uso vs incluso.
@@ -28,7 +29,7 @@ export default async function ConsoleHome() {
                 <div className="flex items-center justify-between">
                   <span className="font-display text-lg font-semibold">{p.nome}</span>
                   <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {p.tier} · {p.status}
+                    {tierLabel(p.tier)} · {p.status}
                   </span>
                 </div>
                 <div className="mt-4 space-y-1">

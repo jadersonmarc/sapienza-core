@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getSetup, MotorError } from "@/lib/motor/client"
+import { tierLabel } from "@/lib/pricing/tier-label"
 import type { SetupStatus } from "@/lib/motor/types"
 
 function Check({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
@@ -85,7 +86,7 @@ export default async function MotorPage() {
               <Check
                 ok={setup.active}
                 label="Assinatura ativa"
-                hint={setup.tier ? `Plano Motor ${setup.tier} ativo.` : "Plano Motor ativo para este tenant."}
+                hint={setup.tier ? `Plano Motor ${tierLabel(setup.tier)} ativo.` : "Plano Motor ativo para este tenant."}
               />
               <Check
                 ok={setup.connected.length > 0}
