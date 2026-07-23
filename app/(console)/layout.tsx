@@ -3,6 +3,7 @@ import { currentContext } from "@/lib/console/current"
 import { tenantSubscriptions } from "@/lib/tenant/context"
 import { Eyebrow } from "@/components/eyebrow"
 import { TenantSwitcher } from "@/components/console/tenant-switcher"
+import { ThemeToggle } from "@/components/theme-toggle"
 import { signOutAction } from "@/app/actions"
 
 // Shell do console autenticado: header com tenant switcher, nav e sair.
@@ -37,6 +38,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             {user.isSuperadmin && (
               <Link href="/super" className="text-primary hover:underline">Admin</Link>
             )}
+            <ThemeToggle />
             <form action={signOutAction}>
               <button className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">
                 Sair
