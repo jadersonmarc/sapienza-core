@@ -12,17 +12,22 @@ export default async function ConfiguracaoPage() {
 
   let status: ChannelStatus = { connected: false, state: "none", number: "" }
   let cfg: AgentConfig | null = null
-  let unavailable: string | null = null
+  let statusWarn: string | null = null
+
+  // Status do canal NÃO pode bloquear a tela: se a instância foi removida no
+  // Evolution (ou o serviço oscilou), ainda queremos mostrar o reconectar.
   try {
     status = await channelStatus(ctx)
-    // getConfig 404 antes do canal existir — o agente só se configura depois de conectar.
-    try {
-      cfg = await getConfig(ctx)
-    } catch (e) {
-      if (!(e instanceof MargotError && e.status === 404)) throw e
-    }
   } catch (e) {
-    unavailable = e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível"
+    statusWarn = e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível"
+  }
+  // getConfig 404 antes do canal existir — o agente só se configura depois de conectar.
+  try {
+    cfg = await getConfig(ctx)
+  } catch (e) {
+    if (!(e instanceof MargotError && e.status === 404)) {
+      statusWarn = statusWarn ?? (e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível")
+    }
   }
 
   return (
@@ -42,25 +47,28 @@ export default async function ConfiguracaoPage() {
         </div>
       </div>
 
-      {unavailable ? (
-        <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
-      ) : (
-        <div className="space-y-8">
-          <ConnectPanel initialStatus={status} canManage={canManage} />
+      <div className="space-y-8">
+        {statusWarn && (
+          <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+            Não foi possível ler o status do canal ({statusWarn}). Se você removeu a instância no Evolution,
+            reconecte abaixo para recriá-la.
+          </p>
+        )}
 
-          {/* A configuração do agente aparece assim que o canal existe (após conectar). */}
-          {cfg ? (
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold">Comportamento do agente</h2>
-              <ConfigForm cfg={cfg} />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Conecte o WhatsApp acima para configurar o comportamento do agente.
-            </p>
-          )}
-        </div>
-      )}
+        <ConnectPanel initialStatus={status} canManage={canManage} />
+
+        {/* A configuração do agente aparece assim que o canal existe (após conectar). */}
+        {cfg ? (
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold">Comportamento do agente</h2>
+            <ConfigForm cfg={cfg} />
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Conecte o WhatsApp acima para configurar o comportamento do agente.
+          </p>
+        )}
+      </div>
     </div>
   )
 }
