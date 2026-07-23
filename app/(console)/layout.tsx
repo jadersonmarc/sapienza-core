@@ -35,7 +35,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             <Link href="/faturas" className="text-muted-foreground hover:text-foreground">Faturas</Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">Usuários</Link>
             {user.isSuperadmin && (
-              <Link href="/super" className="text-primary hover:underline">Sapienza</Link>
+              <Link href="/super" className="text-primary hover:underline">Admin</Link>
             )}
             <form action={signOutAction}>
               <button className="font-mono text-xs uppercase tracking-widest text-muted-foreground hover:text-foreground">
