@@ -20,6 +20,23 @@ export type Message = {
   created_at: string
 }
 
+// CRM / funil de leads.
+export type Contact = {
+  id: string
+  phone: string
+  name: string | null
+  source: string
+  stage_id: string | null
+  consent: boolean
+}
+
+export type Stage = {
+  id: string
+  name: string
+  position: number
+  count: number
+}
+
 export type AgentConfig = {
   // Identidade do canal (vínculo) — read-only aqui; editada via bindChannel.
   evolution_instance: string

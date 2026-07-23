@@ -56,6 +56,12 @@ export default async function MargotPage() {
         >
           Configurar agente
         </Link>
+        <Link
+          href="/margot/crm"
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
+        >
+          Funil de leads
+        </Link>
       </div>
 
       {unavailable ? (

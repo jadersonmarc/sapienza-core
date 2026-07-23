@@ -6,10 +6,12 @@ import type {
   AgentConfig,
   ChannelBinding,
   ChannelStatus,
+  Contact,
   Conversation,
   Message,
   QRResponse,
   SetupStatus,
+  Stage,
   WebhookSecret,
 } from "./types"
 
@@ -105,6 +107,34 @@ export async function handoff(ctx: MargotCtx, convId: string, mode: "bot" | "hum
 
 export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {
   return call<AgentConfig>(ctx, "/api/v1/config")
+}
+
+// ── CRM / funil de leads ─────────────────────────────────────────────────────
+
+export async function listContacts(ctx: MargotCtx, params: { stage_id?: string } = {}): Promise<Contact[]> {
+  const qs = params.stage_id ? `?stage_id=${encodeURIComponent(params.stage_id)}` : ""
+  const r = await call<{ contacts: Contact[] | null }>(ctx, `/api/v1/contacts${qs}`)
+  return r.contacts ?? []
+}
+
+export async function listPipeline(ctx: MargotCtx): Promise<Stage[]> {
+  const r = await call<{ stages: Stage[] | null }>(ctx, "/api/v1/pipeline")
+  return r.stages ?? []
+}
+
+export async function patchContact(
+  ctx: MargotCtx,
+  id: string,
+  body: { name?: string; stage_id?: string; consent: boolean },
+) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/contacts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteContact(ctx: MargotCtx, id: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/contacts/${id}`, { method: "DELETE" })
 }
 
 export async function putConfig(ctx: MargotCtx, cfg: AgentConfig) {

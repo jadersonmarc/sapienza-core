@@ -9,6 +9,8 @@ import {
   bindChannel,
   rotateWebhookSecret,
   connectChannel,
+  patchContact,
+  deleteContact,
   MargotError,
 } from "@/lib/margot/client"
 import type { AgentConfig, ChannelBinding } from "@/lib/margot/types"
@@ -31,6 +33,21 @@ export async function sendMessageAction(_prev: ActionState, formData: FormData):
   } catch (e) {
     return { error: e instanceof MargotError ? e.message : "falha ao enviar" }
   }
+}
+
+export async function updateContactAction(
+  id: string,
+  body: { name?: string; stage_id?: string; consent: boolean },
+): Promise<void> {
+  const ctx = await margotContext()
+  await patchContact(ctx, id, body)
+  revalidatePath("/margot/crm")
+}
+
+export async function deleteContactAction(id: string): Promise<void> {
+  const ctx = await margotContext()
+  await deleteContact(ctx, id)
+  revalidatePath("/margot/crm")
 }
 
 export async function handoffAction(formData: FormData): Promise<void> {
