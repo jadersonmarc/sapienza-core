@@ -14,7 +14,7 @@ type Canal = {
   onde: string[]
   json: string
   nota?: string
-  doc: { label: string; url: string }
+  doc?: { label: string; url: string }
 }
 
 const CANAIS: Canal[] = [
@@ -88,6 +88,36 @@ const CANAIS: Canal[] = [
     json: '{ "access_token": "TH…", "user_id": "17841400000000000" }',
     doc: { label: "Meta — Threads API", url: "https://developers.facebook.com/docs/threads" },
   },
+  {
+    nome: "Blog — WordPress",
+    campos: ["site_url", "username", "app_password"],
+    preReq:
+      "Um site WordPress com a REST API acessível (o padrão) e um usuário com papel de Autor ou Editor. Sem plugins.",
+    onde: [
+      "site_url — o endereço do site (ex.: https://cliente.com).",
+      "username — o login do usuário WordPress (Autor/Editor).",
+      "app_password — em Usuários → Perfil → Senhas de aplicativo (WordPress 5.6+), gere uma nova e copie os blocos exatamente como aparecem.",
+    ],
+    json: '{ "site_url": "https://cliente.com", "username": "editor", "app_password": "abcd 1234 efgh 5678" }',
+    nota: "O texto (markdown) é convertido para HTML e o post sai publicado. Imagem de capa fica para uma próxima versão.",
+    doc: {
+      label: "WordPress — Application Passwords",
+      url: "https://wordpress.org/documentation/article/application-passwords/",
+    },
+  },
+  {
+    nome: "Blog — Webhook (site sob medida)",
+    campos: ["url", "secret"],
+    preReq:
+      "Um endpoint no seu site que receba a peça por POST (JSON) e a publique. Serve para qualquer site/CMS, mas exige um pequeno desenvolvimento do seu lado.",
+    onde: [
+      "url — o endereço do seu endpoint (ex.: https://cliente.com/hooks/sapienza).",
+      "secret — um segredo forte que você define; o seu endpoint o usa para validar a assinatura.",
+    ],
+    json: '{ "url": "https://cliente.com/hooks/sapienza", "secret": "um-segredo-forte" }',
+    nota:
+      "A Margot Editora envia POST com o header X-Sapienza-Signature: sha256=HMAC(secret, corpo). Valide-o antes de publicar. Payload: { slug, title, body_markdown, image_url, published_at }. Responda 2xx (opcional: { \"url\": \"…\" } com o link final).",
+  },
 ]
 
 function CanalCard({ c }: { c: Canal }) {
@@ -125,14 +155,16 @@ function CanalCard({ c }: { c: Canal }) {
 
       {c.nota && <p className="mt-3 text-xs text-muted-foreground">{c.nota}</p>}
 
-      <a
-        href={c.doc.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 inline-block text-sm text-primary hover:underline"
-      >
-        Documentação oficial: {c.doc.label} ↗
-      </a>
+      {c.doc && (
+        <a
+          href={c.doc.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm text-primary hover:underline"
+        >
+          Documentação oficial: {c.doc.label} ↗
+        </a>
+      )}
     </section>
   )
 }
@@ -165,23 +197,18 @@ export default function GuiaCanaisPage() {
         ))}
       </div>
 
-      {/* Blog do site do cliente */}
+      {/* Canal Blog interno */}
       <section className="rounded-xl border border-dashed border-border p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-display text-lg font-semibold text-foreground">Blog do seu site</h2>
+          <h2 className="font-display text-lg font-semibold text-foreground">Blog (interno)</h2>
           <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">sem credenciais</code>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Hoje o canal <span className="font-medium text-foreground">Blog</span> marca a peça como publicada na
-          plataforma e a disponibiliza pela sua slug — não pede token. A publicação automática direto no blog do
-          <span className="font-medium text-foreground"> seu próprio site</span> (WordPress, site sob medida, outro
-          CMS) é uma <span className="font-medium text-foreground">integração dedicada</span> e ainda não é
-          self-service.
-        </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Os caminhos possíveis, conforme o seu site: WordPress via REST API (Application Password), um webhook/endpoint
-          REST no seu site que receba a peça, ou um CMS headless. Para conectar o seu blog, fale com a Sapienza — a
-          gente avalia o seu site e habilita o envio.
+          O canal <span className="font-medium text-foreground">Blog</span> apenas marca a peça como publicada na
+          plataforma pela sua slug — não pede token. Para publicar no blog do{" "}
+          <span className="font-medium text-foreground">seu próprio site</span>, use os canais{" "}
+          <span className="font-medium text-foreground">Blog — WordPress</span> (self-service) ou{" "}
+          <span className="font-medium text-foreground">Blog — Webhook</span> (site sob medida) acima.
         </p>
       </section>
     </div>
