@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { currentContext } from "@/lib/console/current"
 import { createTenant } from "@/lib/tenant/create"
 import { activateSubscription } from "@/lib/provisioning/activate"
+import { cancelSubscription } from "@/lib/provisioning/cancel"
 import { SeatError } from "@/lib/billing/seats"
 import type { ProdutoId } from "@/lib/pricing/load"
 
@@ -69,5 +70,30 @@ export async function activateSubscriptionAction(
   } catch (e) {
     if (e instanceof SeatError) return { error: e.message }
     return { error: e instanceof Error ? e.message : "falha ao ativar assinatura" }
+  }
+}
+
+export type CancelState = { ok?: boolean; error?: string }
+
+// Cancelamento manual (cliente pediu por contato). A multa de fidelidade, se
+// houver, o superadmin combina/cobra à parte — a tela mostra o valor sugerido.
+export async function cancelSubscriptionAction(
+  _prev: CancelState,
+  formData: FormData,
+): Promise<CancelState> {
+  try {
+    await requireSuperadmin()
+    const tenantId = String(formData.get("tenant_id") ?? "")
+    const produto = String(formData.get("produto") ?? "")
+    if (formData.get("confirm") !== "on") return { error: "marque a confirmação para cancelar" }
+    if (!tenantId) return { error: "tenant inválido" }
+    if (!PRODUTOS.has(produto)) return { error: "produto inválido" }
+
+    const done = await cancelSubscription(tenantId, produto as ProdutoId)
+    if (!done) return { error: "assinatura não encontrada ou já cancelada" }
+    revalidatePath("/super")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "falha ao cancelar assinatura" }
   }
 }
