@@ -25,7 +25,7 @@ produtos:
       # conversa, sem cobrança de Meta por mensagem. Custo/resposta = token IA.
       # janela_servico_meta_gratuita e disparo_ativo_marketing só voltam no driver meta.
   motor:
-    nome: "Motor de Conteúdo"
+    nome: "Margot Editora"
     metric: "peca"              # PEÇA PUBLICADA (não gerada)
     tiers:
       - { id: start, mensal: 400,  incluso: 12, canais: 1 }
