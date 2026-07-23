@@ -99,7 +99,7 @@ const CANAIS: Canal[] = [
       "app_password — em Usuários → Perfil → Senhas de aplicativo (WordPress 5.6+), gere uma nova e copie os blocos exatamente como aparecem.",
     ],
     json: '{ "site_url": "https://cliente.com", "username": "editor", "app_password": "abcd 1234 efgh 5678" }',
-    nota: "O texto (markdown) é convertido para HTML e o post sai publicado. Imagem de capa fica para uma próxima versão.",
+    nota: "O texto (markdown) vira HTML e a capa on-brand entra como imagem destacada (featured image) do post.",
     doc: {
       label: "WordPress — Application Passwords",
       url: "https://wordpress.org/documentation/article/application-passwords/",
