@@ -4,6 +4,7 @@ import { tenantSubscriptions } from "@/lib/tenant/context"
 import { Eyebrow } from "@/components/eyebrow"
 import { TenantSwitcher } from "@/components/console/tenant-switcher"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { produtoLabel } from "@/lib/pricing/tier-label"
 import { signOutAction } from "@/app/actions"
 
 // Shell do console autenticado: header com tenant switcher, nav e sair.
@@ -28,10 +29,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/" className="text-muted-foreground hover:text-foreground">Produtos</Link>
             {subscribesMargot && (
-              <Link href="/margot" className="text-muted-foreground hover:text-foreground">Margot</Link>
+              <Link href="/margot" className="text-muted-foreground hover:text-foreground">{produtoLabel("margot")}</Link>
             )}
             {subscribesMotor && (
-              <Link href="/motor" className="text-muted-foreground hover:text-foreground">Motor</Link>
+              <Link href="/motor" className="text-muted-foreground hover:text-foreground">{produtoLabel("motor")}</Link>
             )}
             <Link href="/faturas" className="text-muted-foreground hover:text-foreground">Faturas</Link>
             <Link href="/usuarios" className="text-muted-foreground hover:text-foreground">Usuários</Link>

@@ -35,8 +35,8 @@ export function ActivateForm({ tenants }: { tenants: { id: string; name: string 
               Produto
             </label>
             <select id="produto" name="produto" className={field} defaultValue="margot">
-              <option value="margot">Margot (WhatsApp)</option>
-              <option value="motor">Motor (conteúdo)</option>
+              <option value="margot">Margot Atendente</option>
+              <option value="motor">Margot Editora</option>
             </select>
           </div>
           <div className="space-y-1">

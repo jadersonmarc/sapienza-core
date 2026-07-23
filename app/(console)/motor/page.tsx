@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getSetup, MotorError } from "@/lib/motor/client"
-import { tierLabel } from "@/lib/pricing/tier-label"
+import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import type { SetupStatus } from "@/lib/motor/types"
 
 function Check({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
@@ -37,7 +37,7 @@ export default async function MotorPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Eyebrow>Motor de Conteúdo</Eyebrow>
+        <Eyebrow>{produtoLabel("motor")}</Eyebrow>
         <h1 className="font-display text-2xl font-semibold tracking-tight">Conteúdo multi-canal</h1>
         <p className="text-sm text-muted-foreground">
           Gere peças, aprove (janela de 48h) e publique nos canais conectados.
@@ -74,7 +74,7 @@ export default async function MotorPage() {
       {unavailable ? (
         <div className="rounded-xl border border-border p-4">
           <p className="text-sm text-muted-foreground">
-            Não foi possível falar com o serviço do Motor ({unavailable}). Verifique{" "}
+            Não foi possível falar com o serviço da {produtoLabel("motor")} ({unavailable}). Verifique{" "}
             <span className="font-mono">MOTOR_API_URL</span> e se o data plane está no ar.
           </p>
         </div>
@@ -86,7 +86,7 @@ export default async function MotorPage() {
               <Check
                 ok={setup.active}
                 label="Assinatura ativa"
-                hint={setup.tier ? `Plano Motor ${tierLabel(setup.tier)} ativo.` : "Plano Motor ativo para este tenant."}
+                hint={setup.tier ? `Plano ${produtoLabel("motor")} ${tierLabel(setup.tier)} ativo.` : `Plano ${produtoLabel("motor")} ativo para este tenant.`}
               />
               <Check
                 ok={setup.connected.length > 0}

@@ -1,5 +1,5 @@
 import { currentContext, subscribedProducts } from "@/lib/console/current"
-import { tierLabel } from "@/lib/pricing/tier-label"
+import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import { Eyebrow } from "@/components/eyebrow"
 
 // Home do console: só os produtos que o tenant ATIVO assina, com uso vs incluso.
@@ -17,7 +17,7 @@ export default async function ConsoleHome() {
 
       {products.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Nenhum produto assinado ainda. Fale com a Sapienza para ativar Margot ou Motor.
+          Nenhum produto assinado ainda. Fale com a Sapienza para ativar {produtoLabel("margot")} ou {produtoLabel("motor")}.
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">

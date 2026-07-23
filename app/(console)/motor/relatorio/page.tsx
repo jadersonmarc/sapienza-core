@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listContent, MotorError } from "@/lib/motor/client"
 import { motorMonthlyBilling, motorInvoiceHistory, currentPeriod } from "@/lib/motor/report"
-import { tierLabel } from "@/lib/pricing/tier-label"
+import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -60,7 +60,7 @@ export default async function RelatorioPage() {
       <div className="space-y-2">
         <Eyebrow>
           <Link href="/motor" className="hover:underline">
-            Motor
+            {produtoLabel("motor")}
           </Link>{" "}
           · Relatório
         </Eyebrow>
@@ -95,11 +95,11 @@ export default async function RelatorioPage() {
           )}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Sem assinatura Motor ativa para faturar.</p>
+        <p className="text-sm text-muted-foreground">Sem assinatura {produtoLabel("motor")} ativa para faturar.</p>
       )}
 
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Histórico de faturas (Motor)</h2>
+        <h2 className="text-sm font-medium text-muted-foreground">Histórico de faturas ({produtoLabel("motor")})</h2>
         {invoices.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             Nenhuma fatura emitida ainda — a primeira fecha no fim do ciclo.

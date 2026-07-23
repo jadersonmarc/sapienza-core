@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getChannels, getSetup, MotorError } from "@/lib/motor/client"
+import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { ChannelsStatus, SetupStatus } from "@/lib/motor/types"
 import { ConnectForm } from "./connect-form"
 
@@ -21,7 +22,7 @@ export default async function CanaisPage() {
       <div className="space-y-2">
         <Eyebrow>
           <Link href="/motor" className="hover:underline">
-            Motor
+            {produtoLabel("motor")}
           </Link>{" "}
           · Canais
         </Eyebrow>

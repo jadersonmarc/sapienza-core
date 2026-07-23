@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listContent, MotorError } from "@/lib/motor/client"
+import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
 import { NewContentForm } from "./new-form"
 import { BriefForm } from "./brief-form"
@@ -34,7 +35,7 @@ export default async function ConteudoPage() {
       <div className="space-y-2">
         <Eyebrow>
           <Link href="/motor" className="hover:underline">
-            Motor
+            {produtoLabel("motor")}
           </Link>{" "}
           · Conteúdo
         </Eyebrow>
