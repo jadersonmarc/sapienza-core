@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { margotContext, getConfig, channelStatus, MargotError } from "@/lib/margot/client"
+import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { AgentConfig, ChannelStatus } from "@/lib/margot/types"
 import { ConfigForm } from "./config-form"
 import { ConnectPanel } from "./connect-panel"
@@ -29,11 +30,16 @@ export default async function ConfiguracaoPage() {
       <div className="space-y-2">
         <Eyebrow>
           <Link href="/margot" className="hover:underline">
-            Margot
+            {produtoLabel("margot")}
           </Link>{" "}
           · Configuração
         </Eyebrow>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Configurar agente</h1>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Configurar agente</h1>
+          <Link href="/margot/configuracao/guia" className="text-sm text-primary hover:underline">
+            Como configurar a IA →
+          </Link>
+        </div>
       </div>
 
       {unavailable ? (

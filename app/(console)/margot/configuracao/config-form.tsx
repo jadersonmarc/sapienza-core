@@ -9,8 +9,16 @@ const initial: ActionState = {}
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
 const label = "text-sm font-medium"
 
+// Modelos oferecidos. O id interno segue o que o Margot (Go) passa à Anthropic;
+// a pessoa escolhe entre o rápido/econômico e o mais capaz.
+const MODELOS = [
+  { value: "claude-haiku-4-5", label: "Haiku — rápido e econômico (padrão)" },
+  { value: "claude-sonnet-5", label: "Sonnet — mais capaz, respostas mais ricas" },
+]
+
 export function ConfigForm({ cfg }: { cfg: AgentConfig }) {
   const [state, action, pending] = useActionState(saveConfigAction, initial)
+  const modelDefault = cfg.ai_model.includes("sonnet") ? "claude-sonnet-5" : "claude-haiku-4-5"
 
   return (
     <form action={action} className="space-y-4">
@@ -32,7 +40,13 @@ export function ConfigForm({ cfg }: { cfg: AgentConfig }) {
           <label className={label} htmlFor="ai_model">
             Modelo
           </label>
-          <input id="ai_model" name="ai_model" defaultValue={cfg.ai_model} className={field} />
+          <select id="ai_model" name="ai_model" defaultValue={modelDefault} className={field}>
+            {MODELOS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
