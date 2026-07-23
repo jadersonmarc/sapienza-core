@@ -96,8 +96,11 @@ export async function sendMessage(ctx: MargotCtx, convId: string, text: string) 
   })
 }
 
-export async function handoff(ctx: MargotCtx, convId: string) {
-  return call<{ ok: boolean }>(ctx, `/api/v1/conversations/${convId}/handoff`, { method: "POST" })
+export async function handoff(ctx: MargotCtx, convId: string, mode: "bot" | "human" = "human") {
+  return call<{ ok: boolean; mode: string }>(ctx, `/api/v1/conversations/${convId}/handoff`, {
+    method: "POST",
+    body: JSON.stringify({ mode }),
+  })
 }
 
 export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {

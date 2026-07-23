@@ -33,15 +33,28 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           </Eyebrow>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Atendimento</h1>
         </div>
-        <form action={handoffAction}>
-          <input type="hidden" name="convId" value={id} />
-          <button
-            type="submit"
-            className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Assumir (handoff humano)
-          </button>
-        </form>
+        <div className="flex items-center gap-2">
+          <form action={handoffAction}>
+            <input type="hidden" name="convId" value={id} />
+            <input type="hidden" name="mode" value="human" />
+            <button
+              type="submit"
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted"
+            >
+              Assumir (humano)
+            </button>
+          </form>
+          <form action={handoffAction}>
+            <input type="hidden" name="convId" value={id} />
+            <input type="hidden" name="mode" value="bot" />
+            <button
+              type="submit"
+              className="rounded-lg border border-border px-3 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+            >
+              Devolver ao bot
+            </button>
+          </form>
+        </div>
       </div>
 
       {unavailable ? (

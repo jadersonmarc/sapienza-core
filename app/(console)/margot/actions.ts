@@ -36,8 +36,9 @@ export async function sendMessageAction(_prev: ActionState, formData: FormData):
 export async function handoffAction(formData: FormData): Promise<void> {
   const ctx = await margotContext()
   const convId = String(formData.get("convId") ?? "")
+  const mode = formData.get("mode") === "bot" ? "bot" : "human"
   if (convId) {
-    await handoff(ctx, convId)
+    await handoff(ctx, convId, mode)
     revalidatePath(`/margot/atendimento/${convId}`)
   }
 }
