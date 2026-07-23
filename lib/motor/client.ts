@@ -88,6 +88,17 @@ export async function getContent(ctx: MotorCtx, id: string): Promise<ContentDeta
   return call<ContentDetail>(ctx, `/api/v1/content/${id}`)
 }
 
+export async function updateContent(
+  ctx: MotorCtx,
+  id: string,
+  body: { title: string; bodyMarkdown: string; excerpt?: string },
+): Promise<{ revision_id: string }> {
+  return call<{ revision_id: string }>(ctx, `/api/v1/content/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  })
+}
+
 export async function createContent(ctx: MotorCtx, prompt: string): Promise<{ id: string; slug: string }> {
   return call<{ id: string; slug: string }>(ctx, "/api/v1/content", {
     method: "POST",

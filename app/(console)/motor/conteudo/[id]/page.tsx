@@ -11,6 +11,7 @@ import {
 } from "@/lib/motor/client"
 import type { Analysis, ContentStatus, SocialDraft } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
+import { ContentEditor } from "./content-editor"
 import { SocialPanel } from "./social-panel"
 import { AnalyzePanel } from "./analyze-panel"
 
@@ -102,6 +103,20 @@ export default async function ContentDetailPage({
             <p className="text-xs text-muted-foreground">Capa on-brand (4:5) gerada pelo Motor no publish.</p>
           </div>
         </div>
+
+        {item.revision && (
+          <details className="rounded-xl border border-border p-4">
+            <summary className="cursor-pointer text-sm font-medium">Editar peça</summary>
+            <div className="mt-4">
+              <ContentEditor
+                id={item.id}
+                title={item.revision.title}
+                bodyMarkdown={item.revision.body_markdown}
+                excerpt={item.revision.excerpt ?? ""}
+              />
+            </div>
+          </details>
+        )}
 
         <SocialPanel id={item.id} drafts={social} />
 

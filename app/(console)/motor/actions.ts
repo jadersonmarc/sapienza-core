@@ -6,6 +6,7 @@ import {
   motorContext,
   createContent,
   createFromBrief,
+  updateContent,
   transitionContent,
   regenerateContent,
   publishContent,
@@ -53,6 +54,23 @@ export async function createFromBriefAction(_prev: ActionState, formData: FormDa
   }
   revalidatePath("/motor/conteudo")
   redirect(`/motor/conteudo/${id}`)
+}
+
+export async function saveContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const id = String(formData.get("id") ?? "")
+  const title = String(formData.get("title") ?? "").trim()
+  const bodyMarkdown = String(formData.get("bodyMarkdown") ?? "").trim()
+  const excerpt = String(formData.get("excerpt") ?? "").trim()
+  if (!id) return { error: "peça inválida" }
+  if (!title || !bodyMarkdown) return { error: "título e corpo são obrigatórios" }
+  try {
+    const ctx = await motorContext()
+    await updateContent(ctx, id, { title, bodyMarkdown, excerpt: excerpt || undefined })
+    revalidatePath(`/motor/conteudo/${id}`)
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao salvar" }
+  }
 }
 
 export async function transitionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
