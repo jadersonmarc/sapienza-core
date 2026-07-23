@@ -6,12 +6,14 @@ import {
   getContent,
   listSocialDrafts,
   listAnalyses,
+  listProposals,
   previewImageUrl,
   MotorError,
 } from "@/lib/motor/client"
-import type { Analysis, ContentStatus, SocialDraft } from "@/lib/motor/types"
+import type { Analysis, ContentStatus, Proposal, SocialDraft } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
 import { ContentEditor } from "./content-editor"
+import { ProposalsPanel } from "./proposals-panel"
 import { SocialPanel } from "./social-panel"
 import { AnalyzePanel } from "./analyze-panel"
 
@@ -43,9 +45,10 @@ export default async function ContentDetailPage({
   try {
     const item = await getContent(ctx, id)
     // Social/análises degradam sem derrubar a página (o essencial é a peça).
-    const [social, analyses] = await Promise.all([
+    const [social, analyses, proposals] = await Promise.all([
       listSocialDrafts(ctx, id).then((r) => r.drafts).catch((): SocialDraft[] => []),
       listAnalyses(ctx, id).catch(() => ({ analyses: [] as Analysis[], types: [] })),
+      listProposals(ctx, id).catch((): Proposal[] => []),
     ])
     const title = item.revision?.title || item.slug
     return (
@@ -117,6 +120,8 @@ export default async function ContentDetailPage({
             </div>
           </details>
         )}
+
+        <ProposalsPanel id={item.id} currentBody={item.revision?.body_markdown ?? ""} proposals={proposals} />
 
         <SocialPanel id={item.id} drafts={social} />
 

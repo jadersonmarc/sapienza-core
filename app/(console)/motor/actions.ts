@@ -14,6 +14,9 @@ import {
   generateSocialCaption,
   saveSocialCaption,
   runAnalysis,
+  applyRecommendation,
+  acceptProposal,
+  discardProposal,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentStatus, Platform, SocialPlatform } from "@/lib/motor/types"
@@ -71,6 +74,33 @@ export async function saveContentAction(_prev: ActionState, formData: FormData):
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao salvar" }
   }
+}
+
+export async function applyRecommendationAction(input: {
+  id: string
+  type?: string
+  recommendation: string
+}): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    await applyRecommendation(ctx, input.id, { type: input.type, recommendation: input.recommendation })
+    revalidatePath(`/motor/conteudo/${input.id}`)
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao gerar proposta" }
+  }
+}
+
+export async function acceptProposalAction(id: string, pid: string): Promise<void> {
+  const ctx = await motorContext()
+  await acceptProposal(ctx, id, pid)
+  revalidatePath(`/motor/conteudo/${id}`)
+}
+
+export async function discardProposalAction(id: string, pid: string): Promise<void> {
+  const ctx = await motorContext()
+  await discardProposal(ctx, id, pid)
+  revalidatePath(`/motor/conteudo/${id}`)
 }
 
 export async function transitionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

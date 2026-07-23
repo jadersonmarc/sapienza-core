@@ -24,6 +24,16 @@ export type ContentRevision = {
 
 export type ContentDetail = ContentItem & { revision: ContentRevision | null }
 
+// Revisão proposta pela IA (aguardando aceitar/descartar).
+export type Proposal = {
+  id: string
+  title: string
+  body_markdown: string
+  excerpt: string | null
+  proposed_from: { type?: string; recommendation: string } | null
+  created_at: string
+}
+
 export type Platform = "instagram" | "linkedin" | "blog" | "facebook" | "twitter" | "threads"
 
 export type ChannelsStatus = {

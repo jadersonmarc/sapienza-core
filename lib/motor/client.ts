@@ -10,6 +10,7 @@ import type {
   ContentItem,
   ContentStatus,
   Platform,
+  Proposal,
   SetupStatus,
   SocialCaption,
   SocialDraftsResult,
@@ -97,6 +98,32 @@ export async function updateContent(
     method: "PUT",
     body: JSON.stringify(body),
   })
+}
+
+// ── Propostas de IA ──────────────────────────────────────────────────────────
+
+export async function applyRecommendation(
+  ctx: MotorCtx,
+  id: string,
+  body: { type?: string; recommendation: string },
+): Promise<{ proposal_id: string }> {
+  return call<{ proposal_id: string }>(ctx, `/api/v1/content/${id}/apply-recommendation`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+}
+
+export async function listProposals(ctx: MotorCtx, id: string): Promise<Proposal[]> {
+  const r = await call<{ proposals: Proposal[] | null }>(ctx, `/api/v1/content/${id}/proposals`)
+  return r.proposals ?? []
+}
+
+export async function acceptProposal(ctx: MotorCtx, id: string, pid: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/content/${id}/proposals/${pid}`, { method: "POST" })
+}
+
+export async function discardProposal(ctx: MotorCtx, id: string, pid: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/content/${id}/proposals/${pid}`, { method: "DELETE" })
 }
 
 export async function createContent(ctx: MotorCtx, prompt: string): Promise<{ id: string; slug: string }> {
