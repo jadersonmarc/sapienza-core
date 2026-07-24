@@ -87,7 +87,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
       </aside>
 
       <div className="min-w-0 flex-1">
-        <main className="mx-auto max-w-5xl px-6 py-8">
+        <main className="px-6 py-8">
           {!active ? (
             <div className="space-y-3">
               <Eyebrow>Sem acesso</Eyebrow>
