@@ -58,6 +58,29 @@ export default async function ConfiguracaoPage() {
 
         <ConnectPanel initialStatus={status} canManage={canManage} />
 
+        {ctx.isSuperadmin && status.webhook_url && (
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs">
+            <p className="font-medium text-foreground">Webhook (diagnóstico — superadmin)</p>
+            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+              <li>
+                URL: <span className="font-mono break-all">{status.webhook_url}</span>
+              </li>
+              <li>
+                Ativo:{" "}
+                {status.webhook_enabled ? (
+                  "sim"
+                ) : (
+                  <span className="text-destructive">NÃO — o Evolution não dispara sem isto</span>
+                )}
+              </li>
+              <li>
+                Eventos: <span className="font-mono">{(status.webhook_events ?? []).join(", ") || "—"}</span>
+              </li>
+            </ul>
+            <p className="mt-1">Confirme que a URL é alcançável pelo Evolution e que está ativo.</p>
+          </div>
+        )}
+
         {ctx.isSuperadmin && <BindPanel />}
 
         {/* A configuração do agente aparece assim que o canal existe (após conectar). */}

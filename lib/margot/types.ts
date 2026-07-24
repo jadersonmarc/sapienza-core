@@ -90,7 +90,15 @@ export type WebhookSecret = { instance: string; secret: string; aviso: string }
 
 // Onboarding self-serve por QR.
 export type QRResponse = { qr_base64: string }
-export type ChannelStatus = { connected: boolean; state: string; number: string }
+export type ChannelStatus = {
+  connected: boolean
+  state: string
+  number: string
+  // Diagnóstico da config real do webhook no Evolution (superadmin).
+  webhook_url?: string
+  webhook_enabled?: boolean
+  webhook_events?: string[]
+}
 
 export type SetupStatus = {
   channel_connected: boolean
