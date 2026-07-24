@@ -18,7 +18,11 @@ const produtoSchema = z.object({
   metric: z.string(),
   tiers: z.array(tierSchema).min(1),
   excedente_unitario: z.number().nonnegative(),
-  regras: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])),
+  // Valores escalares OU um mapa por tier (ex.: storage_mb: { start, pro, scale }).
+  regras: z.record(
+    z.string(),
+    z.union([z.number(), z.string(), z.boolean(), z.record(z.string(), z.number())]),
+  ),
 })
 
 const seatsSchema = z.object({

@@ -36,6 +36,7 @@ produtos:
       janela_aprovacao_horas: 48         # silêncio = aprovado -> publica
       max_regeneracoes_por_peca: 2       # 3ª = pedido customizado (excedente)
       revisao_manual_sapienza: false
+      storage_mb: { start: 500, pro: 2000, scale: 5000 }  # cota da biblioteca de mídia por tier
 combo_sistema_sapienza:
   setup: 6000
   mensal_start: 1000
