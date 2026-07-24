@@ -22,7 +22,7 @@ import {
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
-export type ActionState = { ok?: boolean; error?: string }
+export type ActionState = { ok?: boolean; error?: string; message?: string }
 
 export async function createContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const prompt = String(formData.get("prompt") ?? "").trim()
@@ -161,10 +161,19 @@ export async function publishAction(_prev: ActionState, formData: FormData): Pro
     const ctx = await motorContext()
     const id = String(formData.get("id") ?? "")
     if (!id) return { error: "peça inválida" }
-    await publishContent(ctx, id)
+    const res = await publishContent(ctx, id)
     revalidatePath(`/motor/conteudo/${id}`)
     revalidatePath("/motor/conteudo")
-    return { ok: true }
+    // Sempre devolve um resultado visível: nada publicado, parcial, ou ok.
+    const failures = res.failures ?? []
+    if (res.published.length === 0 && failures.length === 0) {
+      return { error: "Nenhum canal recebeu a publicação — confira se o canal deste formato está conectado em Canais." }
+    }
+    if (failures.length > 0) {
+      const falhou = failures.map((f) => `${f.platform}: ${f.error}`).join("; ")
+      return { error: `Publicado em ${res.published.length} canal(is); falhou em ${falhou}` }
+    }
+    return { ok: true, message: `Publicado em ${res.published.map((p) => p.platform).join(", ")}.` }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao publicar" }
   }

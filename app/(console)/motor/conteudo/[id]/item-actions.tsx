@@ -58,6 +58,7 @@ function PublishButton({ id, label = "Publicar agora" }: { id: string; label?: s
       >
         {pending ? "Publicando…" : label}
       </button>
+      {state.message && <span className="text-xs text-primary">{state.message}</span>}
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}
     </form>
   )

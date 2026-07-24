@@ -196,8 +196,8 @@ export async function regenerateContent(
 export async function publishContent(
   ctx: MotorCtx,
   id: string,
-): Promise<{ published: { platform: Platform; url: string }[] }> {
-  return call<{ published: { platform: Platform; url: string }[] }>(
+): Promise<{ published: { platform: Platform; url: string }[]; failures?: { platform: Platform; error: string }[] }> {
+  return call<{ published: { platform: Platform; url: string }[]; failures?: { platform: Platform; error: string }[] }>(
     ctx,
     `/api/v1/content/${id}/publish`,
     { method: "POST", body: JSON.stringify({}) },
