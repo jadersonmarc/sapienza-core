@@ -5,6 +5,7 @@ import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { AgentConfig, ChannelStatus } from "@/lib/margot/types"
 import { ConfigForm } from "./config-form"
 import { ConnectPanel } from "./connect-panel"
+import { BindPanel } from "./bind-panel"
 
 export default async function ConfiguracaoPage() {
   const ctx = await margotContext()
@@ -56,6 +57,8 @@ export default async function ConfiguracaoPage() {
         )}
 
         <ConnectPanel initialStatus={status} canManage={canManage} />
+
+        {ctx.isSuperadmin && <BindPanel />}
 
         {/* A configuração do agente aparece assim que o canal existe (após conectar). */}
         {cfg ? (
