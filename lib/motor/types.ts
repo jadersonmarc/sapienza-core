@@ -3,10 +3,13 @@
 
 export type ContentStatus = "draft" | "in_review" | "scheduled" | "published" | "archived"
 
+export type ContentFormat = "blog" | "linkedin" | "instagram"
+
 export type ContentItem = {
   id: string
   slug: string
   status: ContentStatus
+  format: ContentFormat
   pilar: string | null
   current_revision_id: string | null
   review_deadline_at: string | null

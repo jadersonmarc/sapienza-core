@@ -7,6 +7,7 @@ import type {
   AnalysisType,
   ChannelsStatus,
   ContentDetail,
+  ContentFormat,
   ContentItem,
   ContentStatus,
   Platform,
@@ -126,10 +127,14 @@ export async function discardProposal(ctx: MotorCtx, id: string, pid: string) {
   return call<{ ok: boolean }>(ctx, `/api/v1/content/${id}/proposals/${pid}`, { method: "DELETE" })
 }
 
-export async function createContent(ctx: MotorCtx, prompt: string): Promise<{ id: string; slug: string }> {
+export async function createContent(
+  ctx: MotorCtx,
+  prompt: string,
+  format: ContentFormat = "blog",
+): Promise<{ id: string; slug: string }> {
   return call<{ id: string; slug: string }>(ctx, "/api/v1/content", {
     method: "POST",
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, format }),
   })
 }
 

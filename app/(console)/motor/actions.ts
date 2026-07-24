@@ -19,17 +19,19 @@ import {
   discardProposal,
   MotorError,
 } from "@/lib/motor/client"
-import type { AnalysisType, ContentStatus, Platform, SocialPlatform } from "@/lib/motor/types"
+import type { AnalysisType, ContentFormat, ContentStatus, Platform, SocialPlatform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string }
 
 export async function createContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const prompt = String(formData.get("prompt") ?? "").trim()
   if (!prompt) return { error: "descreva o tema da peça" }
+  const raw = String(formData.get("format") ?? "blog")
+  const format: ContentFormat = raw === "linkedin" || raw === "instagram" ? raw : "blog"
   let id: string
   try {
     const ctx = await motorContext()
-    const created = await createContent(ctx, prompt)
+    const created = await createContent(ctx, prompt, format)
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça" }

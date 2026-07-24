@@ -1,8 +1,14 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, listContent, MotorError } from "@/lib/motor/client"
+import { motorContext, listContent, getChannels, MotorError } from "@/lib/motor/client"
 import { produtoLabel } from "@/lib/pricing/tier-label"
-import type { ContentItem, ContentStatus } from "@/lib/motor/types"
+import type { ContentFormat, ContentItem, ContentStatus } from "@/lib/motor/types"
+
+const FORMAT_LABEL: Record<ContentFormat, string> = {
+  blog: "Blog",
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+}
 import { NewContentForm } from "./new-form"
 import { BriefForm } from "./brief-form"
 
@@ -24,8 +30,14 @@ export default async function ConteudoPage() {
 
   let items: ContentItem[] = []
   let unavailable: string | null = null
+  let socialChannels: ("linkedin" | "instagram")[] = []
   try {
     items = await listContent(ctx)
+    // Canais sociais conectados → orientam o formato da nova peça.
+    const ch = await getChannels(ctx).catch(() => null)
+    socialChannels = (ch?.channels ?? [])
+      .filter((c) => c.enabled && (c.platform === "linkedin" || c.platform === "instagram"))
+      .map((c) => c.platform as "linkedin" | "instagram")
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
@@ -42,7 +54,7 @@ export default async function ConteudoPage() {
         <h1 className="font-display text-2xl font-semibold tracking-tight">Peças</h1>
       </div>
 
-      <NewContentForm />
+      <NewContentForm socialChannels={socialChannels} />
       <BriefForm />
 
       {unavailable ? (
@@ -55,6 +67,7 @@ export default async function ConteudoPage() {
             <thead className="text-muted-foreground">
               <tr className="text-left">
                 <th className="px-4 py-2 font-medium">Peça</th>
+                <th className="px-4 py-2 font-medium">Formato</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Publicada</th>
               </tr>
@@ -67,6 +80,7 @@ export default async function ConteudoPage() {
                       {it.title || it.slug}
                     </Link>
                   </td>
+                  <td className="px-4 py-2 text-xs text-muted-foreground">{FORMAT_LABEL[it.format] ?? it.format}</td>
                   <td className="px-4 py-2">
                     <span
                       className={`rounded px-2 py-0.5 text-xs ${

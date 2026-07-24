@@ -14,7 +14,7 @@ export function BriefForm() {
 
   return (
     <details className="rounded-xl border border-border p-4">
-      <summary className="cursor-pointer text-sm font-medium">Nova peça por brief detalhado</summary>
+      <summary className="cursor-pointer text-sm font-medium">Nova peça por brief detalhado (artigo de blog)</summary>
       <form action={action} className="mt-3 flex flex-col gap-3">
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted-foreground">Objetivo / expectativa *</label>

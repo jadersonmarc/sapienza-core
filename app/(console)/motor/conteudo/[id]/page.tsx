@@ -10,7 +10,7 @@ import {
   previewImageUrl,
   MotorError,
 } from "@/lib/motor/client"
-import type { Analysis, ContentStatus, Proposal, SocialDraft } from "@/lib/motor/types"
+import type { Analysis, ContentFormat, ContentStatus, Proposal, SocialDraft } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
 import { ContentEditor } from "./content-editor"
 import { ProposalsPanel } from "./proposals-panel"
@@ -23,6 +23,12 @@ const STATUS_LABEL: Record<ContentStatus, string> = {
   scheduled: "agendada",
   published: "publicada",
   archived: "arquivada",
+}
+
+const FORMAT_LABEL: Record<ContentFormat, string> = {
+  blog: "Blog",
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
 }
 
 // Limite de regenerações do plano (product_rules.max_regeneracoes_por_peca). Usado só
@@ -50,6 +56,7 @@ export default async function ContentDetailPage({
       listAnalyses(ctx, id).catch(() => ({ analyses: [] as Analysis[], types: [] })),
       listProposals(ctx, id).catch((): Proposal[] => []),
     ])
+    const isSocial = item.format === "linkedin" || item.format === "instagram"
     const title = item.revision?.title || item.slug
     return (
       <div className="space-y-6">
@@ -58,13 +65,16 @@ export default async function ContentDetailPage({
             <Link href="/motor/conteudo" className="hover:underline">
               Conteúdo
             </Link>{" "}
-            · Peça
+            · {FORMAT_LABEL[item.format] ?? "Peça"}
           </Eyebrow>
           <h1 className="font-display text-2xl font-semibold tracking-tight">
             {item.revision?.title || item.slug}
           </h1>
           <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span className="font-mono text-xs">{item.slug}</span>
+            <span className="rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">
+              {FORMAT_LABEL[item.format] ?? item.format}
+            </span>
+            {!isSocial && <span className="font-mono text-xs">{item.slug}</span>}
             <span className="rounded bg-muted px-2 py-0.5 text-xs">{STATUS_LABEL[item.status]}</span>
             {item.status === "in_review" && (
               <span className="text-xs">aprovação até {when(item.review_deadline_at)} (silêncio = aprovado)</span>
@@ -81,7 +91,9 @@ export default async function ContentDetailPage({
 
         <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Rascunho atual</h2>
+            <h2 className="text-sm font-medium text-muted-foreground">
+              {isSocial ? "Texto do post" : "Rascunho atual"}
+            </h2>
             {item.revision ? (
               <article className="rounded-xl border border-border p-4">
                 {item.revision.excerpt && (
@@ -103,7 +115,9 @@ export default async function ContentDetailPage({
               alt={`Prévia on-brand de ${title}`}
               className="w-full rounded-xl border border-border"
             />
-            <p className="text-xs text-muted-foreground">Capa on-brand (4:5) gerada pelo Motor no publish.</p>
+            <p className="text-xs text-muted-foreground">
+              {isSocial ? "Prévia de imagem on-brand (4:5)." : "Capa on-brand (4:5) gerada pelo Motor no publish."}
+            </p>
           </div>
         </div>
 
@@ -116,6 +130,7 @@ export default async function ContentDetailPage({
                 title={item.revision.title}
                 bodyMarkdown={item.revision.body_markdown}
                 excerpt={item.revision.excerpt ?? ""}
+                isSocial={isSocial}
               />
             </div>
           </details>
@@ -123,7 +138,9 @@ export default async function ContentDetailPage({
 
         <ProposalsPanel id={item.id} currentBody={item.revision?.body_markdown ?? ""} proposals={proposals} />
 
-        <SocialPanel id={item.id} drafts={social} />
+        {/* Derivar legendas sociais só faz sentido a partir de um artigo de blog — quando a
+            própria peça já é um post social, o texto acima já é o post. */}
+        {!isSocial && <SocialPanel id={item.id} drafts={social} />}
 
         <AnalyzePanel id={item.id} analyses={analyses.analyses} types={analyses.types} />
       </div>
