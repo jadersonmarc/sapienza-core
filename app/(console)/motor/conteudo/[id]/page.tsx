@@ -1,20 +1,12 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Eyebrow } from "@/components/eyebrow"
-import {
-  motorContext,
-  getContent,
-  listSocialDrafts,
-  listAnalyses,
-  listProposals,
-  previewImageUrl,
-  MotorError,
-} from "@/lib/motor/client"
-import type { Analysis, ContentFormat, ContentStatus, Proposal, SocialDraft } from "@/lib/motor/types"
+import { motorContext, getContent, listAnalyses, listProposals, MotorError } from "@/lib/motor/client"
+import type { Analysis, ContentFormat, ContentStatus, Proposal } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
 import { ContentEditor } from "./content-editor"
 import { ProposalsPanel } from "./proposals-panel"
-import { SocialPanel } from "./social-panel"
+import { PieceImage } from "./piece-image"
 import { AnalyzePanel } from "./analyze-panel"
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
@@ -50,14 +42,12 @@ export default async function ContentDetailPage({
 
   try {
     const item = await getContent(ctx, id)
-    // Social/análises degradam sem derrubar a página (o essencial é a peça).
-    const [social, analyses, proposals] = await Promise.all([
-      listSocialDrafts(ctx, id).then((r) => r.drafts).catch((): SocialDraft[] => []),
+    // Análises/propostas degradam sem derrubar a página (o essencial é a peça).
+    const [analyses, proposals] = await Promise.all([
       listAnalyses(ctx, id).catch(() => ({ analyses: [] as Analysis[], types: [] })),
       listProposals(ctx, id).catch((): Proposal[] => []),
     ])
     const isSocial = item.format === "linkedin" || item.format === "instagram"
-    const title = item.revision?.title || item.slug
     return (
       <div className="space-y-6">
         <div className="space-y-2">
@@ -109,29 +99,10 @@ export default async function ContentDetailPage({
             </p>
           )}
 
-          <details className="rounded-xl border border-border p-4">
-            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-              Prévia da imagem on-brand
-            </summary>
-            <div className="mt-3 max-w-xs space-y-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewImageUrl({ text: title, pilar: item.pilar, archetype: "capa", format: "ig-feed" })}
-                alt={`Prévia on-brand de ${title}`}
-                className="w-full rounded-xl border border-border"
-              />
-              <p className="text-xs text-muted-foreground">
-                {isSocial ? "Imagem on-brand (4:5) opcional." : "Capa on-brand (4:5) gerada no publish."}
-              </p>
-            </div>
-          </details>
+          <PieceImage id={item.id} format={item.format} imageUrl={item.image_url} />
         </div>
 
         <ProposalsPanel id={item.id} currentBody={item.revision?.body_markdown ?? ""} proposals={proposals} />
-
-        {/* Derivar legendas sociais só faz sentido a partir de um artigo de blog — quando a
-            própria peça já é um post social, o texto acima já é o post. */}
-        {!isSocial && <SocialPanel id={item.id} drafts={social} />}
 
         <AnalyzePanel id={item.id} analyses={analyses.analyses} types={analyses.types} />
       </div>

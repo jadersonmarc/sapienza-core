@@ -208,6 +208,19 @@ export async function getChannels(ctx: MotorCtx): Promise<ChannelsStatus> {
   return call<ChannelsStatus>(ctx, "/api/v1/channels")
 }
 
+/** Gera a imagem on-brand da peça no formato do canal e a persiste. */
+export async function generatePieceImage(ctx: MotorCtx, id: string): Promise<{ image_url: string }> {
+  return call<{ image_url: string }>(ctx, `/api/v1/content/${id}/image`, { method: "POST", body: "{}" })
+}
+
+/** Troca a imagem da peça por uma URL da biblioteca de mídia. */
+export async function setPieceImage(ctx: MotorCtx, id: string, imageUrl: string): Promise<{ image_url: string }> {
+  return call<{ image_url: string }>(ctx, `/api/v1/content/${id}/image`, {
+    method: "PUT",
+    body: JSON.stringify({ imageUrl }),
+  })
+}
+
 export async function connectChannel(
   ctx: MotorCtx,
   platform: Platform,

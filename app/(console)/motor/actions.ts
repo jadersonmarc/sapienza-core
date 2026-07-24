@@ -12,15 +12,15 @@ import {
   publishContent,
   connectChannel,
   disconnectChannel,
-  generateSocialCaption,
-  saveSocialCaption,
+  generatePieceImage,
+  setPieceImage,
   runAnalysis,
   applyRecommendation,
   acceptProposal,
   discardProposal,
   MotorError,
 } from "@/lib/motor/client"
-import type { AnalysisType, ContentFormat, ContentStatus, Platform, SocialPlatform } from "@/lib/motor/types"
+import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string }
 
@@ -170,45 +170,30 @@ export async function publishAction(_prev: ActionState, formData: FormData): Pro
   }
 }
 
-export async function generateSocialAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/** Gera a imagem on-brand da peça no formato do canal e a persiste. */
+export async function generatePieceImageAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const ctx = await motorContext()
     const id = String(formData.get("id") ?? "")
-    const platform = String(formData.get("platform") ?? "") as SocialPlatform
-    if (!id || (platform !== "instagram" && platform !== "linkedin")) return { error: "dados inválidos" }
-    await generateSocialCaption(ctx, id, platform)
+    if (!id) return { error: "peça inválida" }
+    await generatePieceImage(ctx, id)
     revalidatePath(`/motor/conteudo/${id}`)
     return { ok: true }
   } catch (e) {
-    return { error: e instanceof MotorError ? e.message : "falha ao gerar legenda" }
+    return { error: e instanceof MotorError ? e.message : "falha ao gerar imagem" }
   }
 }
 
-/** Parseia hashtags de texto livre: remove #, separa por espaço/vírgula, deduplica. */
-function parseHashtags(input: string): string[] {
-  return Array.from(
-    new Set(
-      input
-        .split(/[\s,]+/)
-        .map((t) => t.replace(/^#+/, "").trim())
-        .filter(Boolean),
-    ),
-  )
-}
-
-export async function saveSocialAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/** Troca a imagem da peça por uma URL da biblioteca de mídia. */
+export async function setPieceImageAction(id: string, imageUrl: string): Promise<ActionState> {
   try {
     const ctx = await motorContext()
-    const id = String(formData.get("id") ?? "")
-    const platform = String(formData.get("platform") ?? "") as SocialPlatform
-    const body = String(formData.get("body") ?? "").trim()
-    if (!id || (platform !== "instagram" && platform !== "linkedin")) return { error: "dados inválidos" }
-    if (!body) return { error: "a legenda não pode ficar vazia" }
-    await saveSocialCaption(ctx, id, platform, body, parseHashtags(String(formData.get("hashtags") ?? "")))
+    if (!id || !imageUrl) return { error: "dados inválidos" }
+    await setPieceImage(ctx, id, imageUrl)
     revalidatePath(`/motor/conteudo/${id}`)
     return { ok: true }
   } catch (e) {
-    return { error: e instanceof MotorError ? e.message : "falha ao salvar legenda" }
+    return { error: e instanceof MotorError ? e.message : "falha ao trocar imagem" }
   }
 }
 

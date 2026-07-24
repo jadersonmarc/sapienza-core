@@ -16,6 +16,7 @@ export type ContentItem = {
   scheduled_at: string | null
   published_at: string | null
   regen_count: number
+  image_url: string | null
   title?: string | null
 }
 
@@ -37,7 +38,15 @@ export type Proposal = {
   created_at: string
 }
 
-export type Platform = "instagram" | "linkedin" | "blog" | "facebook" | "twitter" | "threads"
+export type Platform =
+  | "instagram"
+  | "linkedin"
+  | "blog"
+  | "facebook"
+  | "twitter"
+  | "threads"
+  | "wordpress"
+  | "webhook"
 
 export type ChannelsStatus = {
   limit: number
