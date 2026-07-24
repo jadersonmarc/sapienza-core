@@ -3,6 +3,7 @@ import { Eyebrow } from "@/components/eyebrow"
 import { margotContext, listContacts, listPipeline, MargotError } from "@/lib/margot/client"
 import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { Contact, Stage } from "@/lib/margot/types"
+import { FunnelBoard } from "./funnel-board"
 import { ContactsTable } from "./contacts-table"
 
 // Funil de leads da Margot Atendente: contatos capturados pelo atendimento,
@@ -36,19 +37,20 @@ export default async function CrmPage() {
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
+      ) : stages.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nenhum estágio configurado para este tenant ainda.
+        </p>
       ) : (
         <>
-          {stages.length > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {stages.map((s) => (
-                <div key={s.id} className="rounded-xl border border-border p-4">
-                  <p className="text-sm text-muted-foreground">{s.name}</p>
-                  <p className="font-display text-2xl font-semibold">{s.count}</p>
-                </div>
-              ))}
+          <FunnelBoard stages={stages} contacts={contacts} />
+
+          <details className="rounded-xl border border-border p-4">
+            <summary className="cursor-pointer text-sm font-medium">Gerenciar contatos (nome, consentimento, excluir)</summary>
+            <div className="mt-4">
+              <ContactsTable contacts={contacts} stages={stages} />
             </div>
-          )}
-          <ContactsTable contacts={contacts} stages={stages} />
+          </details>
         </>
       )}
     </div>
