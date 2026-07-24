@@ -40,6 +40,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             items: [
               { href: "/motor", label: "Visão geral", exact: true },
               { href: "/motor/conteudo", label: "Conteúdo" },
+              { href: "/motor/midia", label: "Mídia" },
               { href: "/motor/calendario", label: "Calendário" },
               { href: "/motor/canais", label: "Canais" },
               { href: "/motor/relatorio", label: "Relatório" },

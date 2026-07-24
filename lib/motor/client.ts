@@ -81,6 +81,23 @@ async function call<T>(ctx: MotorCtx, path: string, init?: RequestInit): Promise
   return (await res.json()) as T
 }
 
+/** Fetch cru ao Motor com o JWT do produto, SEM lançar em !ok e sem forçar
+ *  Content-Type (serve p/ proxyar status+corpo — inclusive 409 {inUse} — e p/
+ *  multipart de upload). Usado pelas rotas de proxy do console. */
+export async function motorRaw(ctx: MotorCtx, path: string, init?: RequestInit): Promise<Response> {
+  const token = await issueProductToken({
+    userId: ctx.userId,
+    tenantId: ctx.tenantId,
+    produto: PRODUTO,
+    role: ctx.role,
+  })
+  return fetch(baseUrl() + path, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, ...init?.headers },
+    cache: "no-store",
+  })
+}
+
 export async function listContent(ctx: MotorCtx): Promise<ContentItem[]> {
   const r = await call<{ items: ContentItem[] | null }>(ctx, "/api/v1/content")
   return r.items ?? []
