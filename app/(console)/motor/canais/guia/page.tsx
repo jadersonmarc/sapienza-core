@@ -49,15 +49,15 @@ const CANAIS: Canal[] = [
   },
   {
     nome: "LinkedIn",
-    campos: ["access_token", "author_urn"],
+    campos: ["access_token"],
     preReq:
-      "Um app no LinkedIn Developers com o produto 'Share on LinkedIn' (perfil pessoal) ou 'Community Management API' (página de empresa).",
-    permissoes: "escopo w_member_social (postar como membro)",
+      "Um app no LinkedIn Developers com o produto 'Share on LinkedIn'. Basta o access_token — o autor (seu perfil) é resolvido automaticamente pelo token.",
+    permissoes: "escopos w_member_social + openid + profile",
     onde: [
-      "access_token — token OAuth 2.0 (3-legged) do membro, com o escopo w_member_social.",
-      "author_urn — para pessoa: urn:li:person:{id} (o id vem de GET https://api.linkedin.com/v2/userinfo, campo 'sub'). Para empresa: urn:li:organization:{id}.",
+      "access_token — token OAuth 2.0 do membro com os escopos acima. Pode colar só o token (sem JSON).",
     ],
-    json: '{ "access_token": "AQV…", "author_urn": "urn:li:person:AbC123xyz" }',
+    json: 'AQV…   (ou { "access_token": "AQV…" })',
+    nota: "Não precisa achar o URN do autor: a Margot Editora resolve pelo próprio token (via userinfo).",
     doc: {
       label: "LinkedIn — Share on LinkedIn",
       url: "https://learn.microsoft.com/linkedin/consumer/integrations/self-serve/share-on-linkedin",
