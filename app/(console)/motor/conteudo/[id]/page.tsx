@@ -89,52 +89,43 @@ export default async function ContentDetailPage({
 
         <ItemActions id={item.id} status={item.status} regenBlocked={item.regen_count >= REGEN_LIMIT} />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {isSocial ? "Texto do post" : "Rascunho atual"}
-            </h2>
-            {item.revision ? (
-              <article className="rounded-xl border border-border p-4">
-                {item.revision.excerpt && (
-                  <p className="mb-3 text-sm italic text-muted-foreground">{item.revision.excerpt}</p>
-                )}
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                  {item.revision.body_markdown}
-                </pre>
-              </article>
-            ) : (
-              <p className="text-sm text-muted-foreground">Sem revisão.</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-sm font-medium text-muted-foreground">Prévia da imagem</h2>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={previewImageUrl({ text: title, pilar: item.pilar, archetype: "capa", format: "ig-feed" })}
-              alt={`Prévia on-brand de ${title}`}
-              className="w-full rounded-xl border border-border"
+        {/* Editor coeso, mostrado direto — o campo de texto É a peça (sem cópia
+            só-leitura duplicada nem toggle escondendo a edição). */}
+        <div className="max-w-3xl space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            {isSocial ? "Texto do post" : "Conteúdo da peça"}
+          </h2>
+          {item.revision ? (
+            <ContentEditor
+              id={item.id}
+              title={item.revision.title}
+              bodyMarkdown={item.revision.body_markdown}
+              excerpt={item.revision.excerpt ?? ""}
+              isSocial={isSocial}
             />
-            <p className="text-xs text-muted-foreground">
-              {isSocial ? "Prévia de imagem on-brand (4:5)." : "Capa on-brand (4:5) gerada pelo Motor no publish."}
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Sem revisão ainda. Use “Regenerar rascunho” acima para a IA escrever a primeira versão.
             </p>
-          </div>
-        </div>
+          )}
 
-        {item.revision && (
           <details className="rounded-xl border border-border p-4">
-            <summary className="cursor-pointer text-sm font-medium">Editar peça</summary>
-            <div className="mt-4">
-              <ContentEditor
-                id={item.id}
-                title={item.revision.title}
-                bodyMarkdown={item.revision.body_markdown}
-                excerpt={item.revision.excerpt ?? ""}
-                isSocial={isSocial}
+            <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+              Prévia da imagem on-brand
+            </summary>
+            <div className="mt-3 max-w-xs space-y-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewImageUrl({ text: title, pilar: item.pilar, archetype: "capa", format: "ig-feed" })}
+                alt={`Prévia on-brand de ${title}`}
+                className="w-full rounded-xl border border-border"
               />
+              <p className="text-xs text-muted-foreground">
+                {isSocial ? "Imagem on-brand (4:5) opcional." : "Capa on-brand (4:5) gerada no publish."}
+              </p>
             </div>
           </details>
-        )}
+        </div>
 
         <ProposalsPanel id={item.id} currentBody={item.revision?.body_markdown ?? ""} proposals={proposals} />
 

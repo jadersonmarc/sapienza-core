@@ -1,16 +1,9 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, listContent, getChannels, MotorError } from "@/lib/motor/client"
+import { Button } from "@/components/ui/button"
+import { motorContext, listContent, MotorError } from "@/lib/motor/client"
 import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { ContentFormat, ContentItem, ContentStatus } from "@/lib/motor/types"
-
-const FORMAT_LABEL: Record<ContentFormat, string> = {
-  blog: "Blog",
-  linkedin: "LinkedIn",
-  instagram: "Instagram",
-}
-import { NewContentForm } from "./new-form"
-import { BriefForm } from "./brief-form"
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: "rascunho",
@@ -20,9 +13,10 @@ const STATUS_LABEL: Record<ContentStatus, string> = {
   archived: "arquivada",
 }
 
-function when(iso: string | null): string {
-  if (!iso) return "—"
-  return new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+const FORMAT_LABEL: Record<ContentFormat, string> = {
+  blog: "Blog",
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
 }
 
 export default async function ConteudoPage() {
@@ -30,73 +24,64 @@ export default async function ConteudoPage() {
 
   let items: ContentItem[] = []
   let unavailable: string | null = null
-  let socialChannels: ("linkedin" | "instagram")[] = []
   try {
     items = await listContent(ctx)
-    // Canais sociais conectados → orientam o formato da nova peça.
-    const ch = await getChannels(ctx).catch(() => null)
-    socialChannels = (ch?.channels ?? [])
-      .filter((c) => c.enabled && (c.platform === "linkedin" || c.platform === "instagram"))
-      .map((c) => c.platform as "linkedin" | "instagram")
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Eyebrow>
-          <Link href="/motor" className="hover:underline">
-            {produtoLabel("motor")}
-          </Link>{" "}
-          · Conteúdo
-        </Eyebrow>
-        <h1 className="font-display text-2xl font-semibold tracking-tight">Peças</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <Eyebrow>
+            <Link href="/motor" className="hover:underline">
+              {produtoLabel("motor")}
+            </Link>{" "}
+            · Conteúdo
+          </Eyebrow>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">Peças</h1>
+          <p className="font-mono text-xs text-muted-foreground">
+            {items.length} {items.length === 1 ? "peça" : "peças"}
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/motor/conteudo/new">Nova peça</Link>
+        </Button>
       </div>
-
-      <NewContentForm socialChannels={socialChannels} />
-      <BriefForm />
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma peça ainda.</p>
+        <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+          Nenhuma peça ainda. Crie a primeira em “Nova peça”.
+        </div>
       ) : (
-        <div className="rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead className="text-muted-foreground">
-              <tr className="text-left">
-                <th className="px-4 py-2 font-medium">Peça</th>
-                <th className="px-4 py-2 font-medium">Formato</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Publicada</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it) => (
-                <tr key={it.id} className="border-t border-border hover:bg-muted/50">
-                  <td className="px-4 py-2">
-                    <Link href={`/motor/conteudo/${it.id}`} className="hover:underline">
-                      {it.title || it.slug}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted-foreground">{FORMAT_LABEL[it.format] ?? it.format}</td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`rounded px-2 py-0.5 text-xs ${
-                        it.status === "published"
-                          ? "bg-primary/15 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      {STATUS_LABEL[it.status]}
+        <div className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+          {items.map((it) => (
+            <Link
+              key={it.id}
+              href={`/motor/conteudo/${it.id}`}
+              className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50"
+            >
+              <div className="min-w-0">
+                <div className="truncate font-medium">{it.title || it.slug}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">
+                    {FORMAT_LABEL[it.format] ?? it.format}
+                  </span>
+                  <span className="rounded bg-muted px-2 py-0.5">{STATUS_LABEL[it.status]}</span>
+                  {it.published_at && (
+                    <span>
+                      publicada em{" "}
+                      {new Date(it.published_at).toLocaleDateString("pt-BR", { dateStyle: "short" })}
                     </span>
-                  </td>
-                  <td className="px-4 py-2 text-muted-foreground">{when(it.published_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  )}
+                </div>
+              </div>
+              <span className="shrink-0 text-sm text-muted-foreground">Editar →</span>
+            </Link>
+          ))}
         </div>
       )}
     </div>
