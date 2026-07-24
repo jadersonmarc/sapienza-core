@@ -4,6 +4,7 @@ import { motorContext, getChannels, getSetup, MotorError } from "@/lib/motor/cli
 import { produtoLabel } from "@/lib/pricing/tier-label"
 import type { ChannelsStatus, SetupStatus } from "@/lib/motor/types"
 import { ConnectForm } from "./connect-form"
+import { ChannelCard } from "./channel-card"
 
 export default async function CanaisPage() {
   const ctx = await motorContext()
@@ -41,19 +42,7 @@ export default async function CanaisPage() {
           {channels && channels.channels.length > 0 ? (
             <ul className="grid gap-3 sm:grid-cols-2">
               {channels.channels.map((c) => (
-                <li
-                  key={c.platform}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
-                >
-                  <span className="text-sm font-medium">{c.platform}</span>
-                  <span
-                    className={`rounded px-2 py-0.5 text-xs ${
-                      c.enabled ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {c.enabled ? "ativo" : "inativo"}
-                  </span>
-                </li>
+                <ChannelCard key={c.platform} platform={c.platform} enabled={c.enabled} />
               ))}
             </ul>
           ) : (

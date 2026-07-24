@@ -11,6 +11,7 @@ import {
   regenerateContent,
   publishContent,
   connectChannel,
+  disconnectChannel,
   generateSocialCaption,
   saveSocialCaption,
   runAnalysis,
@@ -237,5 +238,19 @@ export async function connectChannelAction(_prev: ActionState, formData: FormDat
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao conectar canal" }
+  }
+}
+
+export async function disconnectChannelAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const platform = String(formData.get("platform") ?? "") as Platform
+    if (!platform) return { error: "canal inválido" }
+    await disconnectChannel(ctx, platform)
+    revalidatePath("/motor/canais")
+    revalidatePath("/motor")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao desconectar canal" }
   }
 }

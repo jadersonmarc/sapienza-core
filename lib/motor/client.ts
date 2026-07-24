@@ -202,6 +202,13 @@ export async function connectChannel(
   })
 }
 
+export async function disconnectChannel(ctx: MotorCtx, platform: Platform): Promise<{ ok: boolean }> {
+  return call<{ ok: boolean }>(ctx, "/api/v1/channels", {
+    method: "DELETE",
+    body: JSON.stringify({ platform }),
+  })
+}
+
 export async function getSetup(ctx: MotorCtx): Promise<SetupStatus> {
   return call<SetupStatus>(ctx, "/api/v1/setup")
 }
