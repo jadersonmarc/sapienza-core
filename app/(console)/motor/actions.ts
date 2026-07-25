@@ -6,6 +6,7 @@ import {
   motorContext,
   createContent,
   createFromBrief,
+  deleteContent,
   updateContent,
   transitionContent,
   regenerateContent,
@@ -60,6 +61,20 @@ export async function createFromBriefAction(_prev: ActionState, formData: FormDa
   }
   revalidatePath("/motor/conteudo")
   redirect(`/motor/conteudo/${id}`)
+}
+
+/** Exclui a peça e volta para a lista. */
+export async function deleteContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const id = String(formData.get("id") ?? "")
+  if (!id) return { error: "peça inválida" }
+  try {
+    const ctx = await motorContext()
+    await deleteContent(ctx, id)
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao excluir" }
+  }
+  revalidatePath("/motor/conteudo")
+  redirect("/motor/conteudo")
 }
 
 export async function saveContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

@@ -116,6 +116,10 @@ export async function getContent(ctx: MotorCtx, id: string): Promise<ContentDeta
   return call<ContentDetail>(ctx, `/api/v1/content/${id}`)
 }
 
+export async function deleteContent(ctx: MotorCtx, id: string): Promise<{ ok: boolean }> {
+  return call<{ ok: boolean }>(ctx, `/api/v1/content/${id}`, { method: "DELETE" })
+}
+
 export async function updateContent(
   ctx: MotorCtx,
   id: string,

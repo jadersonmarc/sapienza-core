@@ -4,6 +4,7 @@ import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getContent, listAnalyses, listProposals, MotorError } from "@/lib/motor/client"
 import type { Analysis, ContentFormat, ContentStatus, Proposal } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
+import { DeleteButton } from "./delete-button"
 import { ContentEditor } from "./content-editor"
 import { ProposalsPanel } from "./proposals-panel"
 import { PieceImage } from "./piece-image"
@@ -77,7 +78,10 @@ export default async function ContentDetailPage({
           </div>
         </div>
 
-        <ItemActions id={item.id} status={item.status} regenBlocked={item.regen_count >= REGEN_LIMIT} />
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <ItemActions id={item.id} status={item.status} regenBlocked={item.regen_count >= REGEN_LIMIT} />
+          <DeleteButton id={item.id} />
+        </div>
 
         {/* Editor coeso, mostrado direto — o campo de texto É a peça (sem cópia
             só-leitura duplicada nem toggle escondendo a edição). */}
