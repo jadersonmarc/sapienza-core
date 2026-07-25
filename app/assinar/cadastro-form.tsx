@@ -17,10 +17,28 @@ function checks(pw: string) {
   }
 }
 
+// Campos controlados por state: o React 19 reseta o <form> após a action, então
+// sem isso o cliente perderia tudo (cartão/endereço) num erro de pagamento. Os
+// dados do cartão ficam só no cliente (não trafegam de volta pelo servidor).
 export function CadastroForm({ produto, tier }: { produto: string; tier: string }) {
   const [state, action, pending] = useActionState(signupAction, initial)
+  const [f, setF] = useState({
+    name: "",
+    taxId: "",
+    email: "",
+    cardNumber: "",
+    cardHolder: "",
+    cardMonth: "",
+    cardYear: "",
+    cardCcv: "",
+    postalCode: "",
+    addressNumber: "",
+    phone: "",
+  })
   const [pw, setPw] = useState("")
   const [confirm, setConfirm] = useState("")
+  const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setF((prev) => ({ ...prev, [k]: e.target.value }))
 
   const c = checks(pw)
   const score = Object.values(c).filter(Boolean).length
@@ -34,15 +52,15 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">Nome ou razão social</span>
-        <input name="name" required autoComplete="organization" className={field} />
+        <input name="name" required autoComplete="organization" value={f.name} onChange={set("name")} className={field} />
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">CPF ou CNPJ</span>
-        <input name="taxId" required inputMode="numeric" autoComplete="off" className={field} />
+        <input name="taxId" required inputMode="numeric" autoComplete="off" value={f.taxId} onChange={set("taxId")} className={field} />
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">E-mail</span>
-        <input name="email" type="email" required autoComplete="email" className={field} />
+        <input name="email" type="email" required autoComplete="email" value={f.email} onChange={set("email")} className={field} />
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
@@ -108,41 +126,43 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
           inputMode="numeric"
           autoComplete="cc-number"
           placeholder="0000 0000 0000 0000"
+          value={f.cardNumber}
+          onChange={set("cardNumber")}
           className={field}
         />
       </label>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">Nome impresso no cartão</span>
-        <input name="cardHolder" required autoComplete="cc-name" className={field} />
+        <input name="cardHolder" required autoComplete="cc-name" value={f.cardHolder} onChange={set("cardHolder")} className={field} />
       </label>
       <div className="grid grid-cols-3 gap-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">Mês</span>
-          <input name="cardMonth" required inputMode="numeric" autoComplete="cc-exp-month" placeholder="MM" maxLength={2} className={field} />
+          <input name="cardMonth" required inputMode="numeric" autoComplete="cc-exp-month" placeholder="MM" maxLength={2} value={f.cardMonth} onChange={set("cardMonth")} className={field} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">Ano</span>
-          <input name="cardYear" required inputMode="numeric" autoComplete="cc-exp-year" placeholder="AAAA" maxLength={4} className={field} />
+          <input name="cardYear" required inputMode="numeric" autoComplete="cc-exp-year" placeholder="AAAA" maxLength={4} value={f.cardYear} onChange={set("cardYear")} className={field} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">CVV</span>
-          <input name="cardCcv" required inputMode="numeric" autoComplete="cc-csc" placeholder="123" maxLength={4} className={field} />
+          <input name="cardCcv" required inputMode="numeric" autoComplete="cc-csc" placeholder="123" maxLength={4} value={f.cardCcv} onChange={set("cardCcv")} className={field} />
         </label>
       </div>
 
       <div className="grid grid-cols-[1fr_1fr] gap-2">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">CEP</span>
-          <input name="postalCode" required inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" className={field} />
+          <input name="postalCode" required inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" value={f.postalCode} onChange={set("postalCode")} className={field} />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted-foreground">Número</span>
-          <input name="addressNumber" required inputMode="numeric" autoComplete="off" className={field} />
+          <input name="addressNumber" required inputMode="numeric" autoComplete="off" value={f.addressNumber} onChange={set("addressNumber")} className={field} />
         </label>
       </div>
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">Telefone (com DDD)</span>
-        <input name="phone" required inputMode="tel" autoComplete="tel" placeholder="(11) 90000-0000" className={field} />
+        <input name="phone" required inputMode="tel" autoComplete="tel" placeholder="(11) 90000-0000" value={f.phone} onChange={set("phone")} className={field} />
       </label>
 
       {state.error && (
