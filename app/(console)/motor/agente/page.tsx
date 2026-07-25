@@ -1,16 +1,24 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, getEditorConfig, MotorError } from "@/lib/motor/client"
+import { motorContext, getEditorConfig, getChannels, MotorError } from "@/lib/motor/client"
 import { produtoLabel } from "@/lib/pricing/tier-label"
+import type { ContentFormat } from "@/lib/motor/types"
 import { AgenteForm } from "./agente-form"
 
 export default async function AgentePage() {
   const ctx = await motorContext()
 
   let cfg
+  let formats: ContentFormat[] = []
   let unavailable: string | null = null
   try {
     cfg = await getEditorConfig(ctx)
+    // Formatos disponíveis = os de canais conectados (a automação cria orientada a eles).
+    const ch = await getChannels(ctx).catch(() => null)
+    const connected = new Set((ch?.channels ?? []).filter((c) => c.enabled).map((c) => c.platform))
+    if (connected.has("blog") || connected.has("wordpress") || connected.has("webhook")) formats.push("blog")
+    if (connected.has("linkedin")) formats.push("linkedin")
+    if (connected.has("instagram")) formats.push("instagram")
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
@@ -34,7 +42,7 @@ export default async function AgentePage() {
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
       ) : cfg ? (
-        <AgenteForm cfg={cfg} />
+        <AgenteForm cfg={cfg} formats={formats} />
       ) : null}
     </div>
   )

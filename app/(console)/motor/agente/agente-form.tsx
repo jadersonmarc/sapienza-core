@@ -2,9 +2,15 @@
 
 import { useActionState } from "react"
 import { saveEditorConfigAction, type ActionState } from "../actions"
-import type { EditorConfig } from "@/lib/motor/types"
+import type { ContentFormat, EditorConfig } from "@/lib/motor/types"
 
 const initial: ActionState = {}
+
+const FORMAT_LABEL: Record<ContentFormat, string> = {
+  blog: "Blog (artigo)",
+  linkedin: "Post de LinkedIn",
+  instagram: "Post de Instagram",
+}
 
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
 const label = "text-sm font-medium"
@@ -17,8 +23,11 @@ const MODELOS = [
   { value: "claude-haiku-4-5", label: "Haiku — rápido e econômico" },
 ]
 
-export function AgenteForm({ cfg }: { cfg: EditorConfig }) {
+export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: ContentFormat[] }) {
   const [state, action, pending] = useActionState(saveEditorConfigAction, initial)
+  // Formato padrão só entre os canais conectados. Default = o configurado, se ainda
+  // conectado; senão o primeiro disponível.
+  const defaultFormat = formats.includes(cfg.format) ? cfg.format : (formats[0] ?? "blog")
 
   return (
     <form action={action} className="space-y-4">
@@ -80,11 +89,33 @@ export function AgenteForm({ cfg }: { cfg: EditorConfig }) {
           <label className={label} htmlFor="format">
             Formato padrão da automação
           </label>
-          <select id="format" name="format" defaultValue={cfg.format} className={field}>
-            <option value="blog">Blog (artigo)</option>
-            <option value="linkedin">Post de LinkedIn</option>
-            <option value="instagram">Post de Instagram</option>
-          </select>
+          {formats.length === 0 ? (
+            <>
+              <input type="hidden" name="format" value={cfg.format} />
+              <p className="text-xs text-muted-foreground">
+                Nenhum canal conectado. A automação precisa de um canal para saber o que criar —{" "}
+                <a href="/motor/canais" className="text-primary hover:underline">
+                  conecte um canal
+                </a>
+                .
+              </p>
+            </>
+          ) : (
+            <>
+              <select id="format" name="format" defaultValue={defaultFormat} className={field}>
+                {formats.map((f) => (
+                  <option key={f} value={f}>
+                    {FORMAT_LABEL[f]}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-muted-foreground">
+                {formats.length > 1
+                  ? "Você tem mais de um canal — defina em qual formato as peças automáticas nascem."
+                  : "Segue o único canal conectado."}
+              </p>
+            </>
+          )}
         </div>
         <div className="space-y-1">
           <label className={label} htmlFor="cadence_days">
