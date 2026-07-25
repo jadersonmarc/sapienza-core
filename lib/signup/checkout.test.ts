@@ -112,6 +112,33 @@ maybe("checkoutSignup", () => {
     ).rejects.toThrow(/já existe uma conta/)
   })
 
+  it("mesmo nome de empresa NÃO funde contas: cada cadastro é um tenant novo", async () => {
+    const a = await checkoutSignup({ name: "Mesma Empresa", taxId: "12345678000199", email: "a1@emp.com", password: "SenhaForte123", produto: "margot", tier: "pro", ...validCard })
+    const b = await checkoutSignup({ name: "Mesma Empresa", taxId: "12345678000199", email: "b2@emp.com", password: "SenhaForte123", produto: "margot", tier: "pro", ...validCard })
+    expect(a.tenantId).not.toBe(b.tenantId)
+    const slugs = await raw<{ slug: string }[]>`SELECT slug FROM public.tenants WHERE name='Mesma Empresa' ORDER BY slug`
+    expect(slugs.length).toBe(2)
+    expect(slugs[0].slug).not.toBe(slugs[1].slug) // slug único (sufixado)
+  })
+
+  it("falha no provedor (cartão/Asaas) faz ROLLBACK — não deixa conta órfã", async () => {
+    class FailingProvider extends FakeProvider {
+      async createCardSubscription(): Promise<{ id: string; status: string }> {
+        throw new Error("cartão recusado")
+      }
+    }
+    setPaymentProvider(new FailingProvider())
+    await expect(
+      checkoutSignup({ name: "Órfã Teste", taxId: "12345678000199", email: "orfa@x.com", password: "SenhaForte123", produto: "margot", tier: "pro", ...validCard }),
+    ).rejects.toThrow(/cartão recusado/)
+    // conta desfeita: nem usuário, nem tenant sobraram
+    const [{ nu }] = await raw<{ nu: number }[]>`SELECT count(*)::int AS nu FROM public.users WHERE email='orfa@x.com'`
+    const [{ nt }] = await raw<{ nt: number }[]>`SELECT count(*)::int AS nt FROM public.tenants WHERE name='Órfã Teste'`
+    expect(nu).toBe(0)
+    expect(nt).toBe(0)
+    setPaymentProvider(new FakeProvider()) // restaura p/ os próximos testes
+  })
+
   it("a rota pública exige x-checkout-secret (401 sem)", async () => {
     process.env.CHECKOUT_SECRET = "sitesecret"
     const { POST } = await import("@/app/api/public/checkout/route")

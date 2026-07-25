@@ -33,23 +33,44 @@ export async function createTenant(input: {
   // Senha escolhida pelo cliente (checkout). Sem ela, geramos uma inicial forte
   // (fluxo superadmin). Validada por quem passa (o checkout usa validatePasswordStrength).
   ownerPassword?: string
+  // Self-service (checkout): SEMPRE cria um tenant NOVO com slug único — nunca reusa
+  // um tenant existente por slug (senão dois cadastros de nomes iguais se fundiriam
+  // no mesmo tenant). Superadmin/seed mantém o default idempotente por slug.
+  uniqueSlug?: boolean
 }): Promise<CreatedTenant> {
   const name = input.name.trim()
   const ownerEmail = input.ownerEmail.trim().toLowerCase()
   if (!name) throw new Error("nome do cliente é obrigatório")
   if (!ownerEmail.includes("@")) throw new Error("e-mail do owner inválido")
-  const slug = slugify(name)
-  if (!slug) throw new Error("nome inválido (slug vazio)")
+  const baseSlug = slugify(name)
+  if (!baseSlug) throw new Error("nome inválido (slug vazio)")
 
   const ownerPassword = input.ownerPassword ?? generatePassword()
   const hash = await bcrypt.hash(ownerPassword, 12)
 
-  const tenantId = await db.transaction(async (tx) => {
-    const [tenant] = (await tx.execute(sql`
-      INSERT INTO public.tenants (name, slug) VALUES (${name}, ${slug})
-      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, updated_at = now()
-      RETURNING id
-    `)) as unknown as { id: string }[]
+  const created = await db.transaction(async (tx) => {
+    let slug = baseSlug
+    let tenant: { id: string } | undefined
+
+    if (input.uniqueSlug) {
+      // Garante um tenant novo: tenta o slug; em conflito, sufixa e tenta de novo.
+      for (let i = 0; i < 6 && !tenant; i++) {
+        const rows = (await tx.execute(sql`
+          INSERT INTO public.tenants (name, slug) VALUES (${name}, ${slug})
+          ON CONFLICT (slug) DO NOTHING RETURNING id
+        `)) as unknown as { id: string }[]
+        if (rows.length > 0) tenant = rows[0]
+        else slug = `${baseSlug}-${randomBytes(2).toString("hex")}`
+      }
+      if (!tenant) throw new Error("não foi possível gerar um identificador único")
+    } else {
+      const rows = (await tx.execute(sql`
+        INSERT INTO public.tenants (name, slug) VALUES (${name}, ${slug})
+        ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, updated_at = now()
+        RETURNING id
+      `)) as unknown as { id: string }[]
+      tenant = rows[0]
+    }
 
     const [user] = (await tx.execute(sql`
       INSERT INTO public.users (email, password_hash, is_superadmin)
@@ -63,8 +84,8 @@ export async function createTenant(input: {
       VALUES (${user.id}::uuid, ${tenant.id}::uuid, 'owner')
       ON CONFLICT (user_id, tenant_id) DO UPDATE SET role = 'owner'
     `)
-    return tenant.id
+    return { id: tenant.id, slug }
   })
 
-  return { tenantId, slug, ownerEmail, ownerPassword }
+  return { tenantId: created.id, slug: created.slug, ownerEmail, ownerPassword }
 }
