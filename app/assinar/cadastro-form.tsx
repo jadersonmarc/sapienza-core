@@ -96,7 +96,7 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
       <div className="mt-2 border-t border-border pt-4">
         <h3 className="text-sm font-semibold">Pagamento no cartão</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Assinatura mensal, cobrança recorrente. Cancele quando quiser.
+          Assinatura mensal, cobrança recorrente no cartão.
         </p>
       </div>
 
