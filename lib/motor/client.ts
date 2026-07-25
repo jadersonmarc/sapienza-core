@@ -58,15 +58,24 @@ async function call<T>(ctx: MotorCtx, path: string, init?: RequestInit): Promise
     produto: PRODUTO,
     role: ctx.role,
   })
-  const res = await fetch(baseUrl() + path, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      ...init?.headers,
-    },
-    cache: "no-store",
-  })
+  // Timeout: se o motor demorar, devolve MotorError (erro claro na UI) em vez de
+  // pendurar a requisição do console até o proxy cortar com 503.
+  let res: Response
+  try {
+    res = await fetch(baseUrl() + path, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...init?.headers,
+      },
+      cache: "no-store",
+      signal: init?.signal ?? AbortSignal.timeout(25000),
+    })
+  } catch (e) {
+    const timedOut = e instanceof DOMException && e.name === "TimeoutError"
+    throw new MotorError(504, timedOut ? "o serviço do Motor demorou a responder" : "falha ao falar com o Motor")
+  }
   if (!res.ok) {
     let msg = res.statusText
     try {
