@@ -85,4 +85,38 @@ describe("Asaas payment provider", () => {
       paymentProvider().upsertCustomer({ name: "X", taxId: "1", email: "a@b.com" }),
     ).rejects.toThrow(/CPF\/CNPJ inválido/)
   })
+
+  it("createCardSubscription: assinatura mensal no cartão com titular e remoteIp", async () => {
+    const calls = mockFetch(200, { id: "sub_1", status: "ACTIVE" })
+    const s = await paymentProvider().createCardSubscription({
+      customerId: "cus_123",
+      value: 700,
+      description: "Sapienza — motor start",
+      externalReference: "inv-abc",
+      nextDueDate: "2026-07-25",
+      remoteIp: "200.1.2.3",
+      card: { holderName: "FULANO", number: "5162306219378829", expiryMonth: "05", expiryYear: "2030", ccv: "318" },
+      holder: { name: "Fulano", email: "f@x.com", taxId: "12345678000199", postalCode: "89223005", addressNumber: "277", phone: "4730033030" },
+    })
+    expect(s).toEqual({ id: "sub_1", status: "ACTIVE" })
+    expect(calls[0].url).toBe("https://sandbox.test/api/v3/subscriptions")
+    expect(calls[0].body).toMatchObject({
+      customer: "cus_123",
+      billingType: "CREDIT_CARD",
+      cycle: "MONTHLY",
+      value: 700,
+      nextDueDate: "2026-07-25",
+      externalReference: "inv-abc",
+      remoteIp: "200.1.2.3",
+      creditCard: { number: "5162306219378829", expiryMonth: "05", expiryYear: "2030", ccv: "318" },
+      creditCardHolderInfo: { cpfCnpj: "12345678000199", postalCode: "89223005", addressNumber: "277", phone: "4730033030" },
+    })
+  })
+
+  it("cancelSubscription: DELETE /subscriptions/{id}", async () => {
+    const calls = mockFetch(200, { deleted: true })
+    await paymentProvider().cancelSubscription("sub_9")
+    expect(calls[0].method).toBe("DELETE")
+    expect(calls[0].url).toBe("https://sandbox.test/api/v3/subscriptions/sub_9")
+  })
 })

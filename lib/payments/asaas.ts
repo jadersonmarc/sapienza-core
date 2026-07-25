@@ -16,18 +16,22 @@ export type ChargeInput = {
 }
 export type Charge = { id: string; invoiceUrl: string; status: string }
 
-// Checkout hospedado com assinatura RECORRENTE no cartão. O cliente digita o
-// cartão na página do Asaas (nunca no nosso servidor); o Asaas cobra todo mês.
-export type CheckoutInput2 = {
+// Assinatura RECORRENTE no cartão (transparente): o cliente digita o cartão na
+// NOSSA página; mandamos os dados uma vez ao Asaas, que guarda o cartão e cobra
+// todo mês sozinho. O primeiro pagamento é capturado na criação — cartão recusado
+// devolve erro aqui. O webhook do 1º pagamento (externalReference = fatura) ativa.
+export type CardSubscriptionInput = {
+  customerId: string
   value: number
   description: string
   externalReference: string // id da nossa fatura de ativação (p/ o webhook reconciliar)
   nextDueDate: string // "YYYY-MM-DD" — 1ª cobrança
-  customer: { name: string; taxId: string; email: string }
-  successUrl: string
-  cancelUrl: string
+  remoteIp: string // exigido pelo Asaas p/ antifraude no cartão
+  card: { holderName: string; number: string; expiryMonth: string; expiryYear: string; ccv: string }
+  // Asaas exige do titular: nome, e-mail, CPF/CNPJ, CEP, número e telefone.
+  holder: { name: string; email: string; taxId: string; postalCode: string; addressNumber: string; phone: string }
 }
-export type CheckoutSession = { id: string; url: string }
+export type CardSubscription = { id: string; status: string }
 
 export interface PaymentProvider {
   /** Há credenciais configuradas (senão não dá para cobrar). */
@@ -36,8 +40,10 @@ export interface PaymentProvider {
   upsertCustomer(input: CustomerInput): Promise<{ id: string }>
   /** Emite uma cobrança avulsa (usada no excedente do fechamento mensal). */
   createCharge(input: ChargeInput): Promise<Charge>
-  /** Cria a sessão de checkout hospedado (assinatura recorrente no cartão). */
-  createCheckout(input: CheckoutInput2): Promise<CheckoutSession>
+  /** Cria a assinatura recorrente no cartão (transparente). */
+  createCardSubscription(input: CardSubscriptionInput): Promise<CardSubscription>
+  /** Cancela a assinatura recorrente no provedor (para de cobrar o cartão). */
+  cancelSubscription(subscriptionId: string): Promise<void>
 }
 
 export class PaymentError extends Error {
@@ -107,20 +113,37 @@ class Asaas implements PaymentProvider {
     return { id: r.id, invoiceUrl: r.invoiceUrl, status: r.status }
   }
 
-  async createCheckout(input: CheckoutInput2): Promise<CheckoutSession> {
-    const r = await this.req<{ id: string; link?: string }>("POST", "/checkouts", {
-      billingTypes: ["CREDIT_CARD"],
-      chargeTypes: ["RECURRENT"],
-      minutesToExpire: 60,
-      callback: { successUrl: input.successUrl, cancelUrl: input.cancelUrl, expiredUrl: input.cancelUrl },
-      items: [{ name: input.description, value: input.value, quantity: 1 }],
-      customerData: { name: input.customer.name, cpfCnpj: input.customer.taxId, email: input.customer.email },
-      subscription: { cycle: "MONTHLY", nextDueDate: input.nextDueDate },
+  async createCardSubscription(input: CardSubscriptionInput): Promise<CardSubscription> {
+    const r = await this.req<{ id: string; status?: string }>("POST", "/subscriptions", {
+      customer: input.customerId,
+      billingType: "CREDIT_CARD",
+      cycle: "MONTHLY",
+      value: input.value,
+      nextDueDate: input.nextDueDate,
+      description: input.description,
       externalReference: input.externalReference,
+      remoteIp: input.remoteIp,
+      creditCard: {
+        holderName: input.card.holderName,
+        number: input.card.number,
+        expiryMonth: input.card.expiryMonth,
+        expiryYear: input.card.expiryYear,
+        ccv: input.card.ccv,
+      },
+      creditCardHolderInfo: {
+        name: input.holder.name,
+        email: input.holder.email,
+        cpfCnpj: input.holder.taxId,
+        postalCode: input.holder.postalCode,
+        addressNumber: input.holder.addressNumber,
+        phone: input.holder.phone,
+      },
     })
-    // Prefere o link retornado; senão monta pela base (sandbox vs produção).
-    const base = this.baseUrl.includes("sandbox") ? "https://sandbox.asaas.com" : "https://www.asaas.com"
-    return { id: r.id, url: r.link || `${base}/checkoutSession/show?id=${r.id}` }
+    return { id: r.id, status: r.status ?? "" }
+  }
+
+  async cancelSubscription(subscriptionId: string): Promise<void> {
+    await this.req("DELETE", `/subscriptions/${subscriptionId}`)
   }
 }
 

@@ -103,6 +103,8 @@ export const subscriptions = pgTable("subscriptions", {
   activatedAt: timestamp("activated_at", { withTimezone: true }).notNull().defaultNow(),
   // Gating: soft (default) fatura excedente; hard bloqueia ao atingir o incluso.
   hardCap: boolean("hard_cap").notNull().default(false),
+  // Assinatura recorrente no cartão (Asaas) — usada para cancelar a cobrança.
+  providerSubId: text("provider_sub_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
