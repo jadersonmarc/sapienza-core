@@ -35,7 +35,7 @@ function dueInDays(days: number): string {
 
 export async function checkoutSignup(
   input: CheckoutInput,
-): Promise<{ tenantId: string; invoiceId: string; chargeId: string }> {
+): Promise<{ tenantId: string; invoiceId: string; checkoutUrl: string }> {
   const email = input.email.trim().toLowerCase()
   if (!PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
   if (!TIERS.has(input.tier)) throw new CheckoutError("plano inválido")
@@ -83,28 +83,24 @@ export async function checkoutSignup(
     RETURNING id
   `)) as unknown as { id: string }[]
 
-  // 6) cobrança no Asaas (externalReference = id da fatura, p/ o webhook reconciliar)
-  const asaasCustomerId = (
-    (await db.execute(sql`SELECT asaas_customer_id FROM public.tenants WHERE id = ${tenantId}::uuid`)) as unknown as {
-      asaas_customer_id: string | null
-    }[]
-  )[0]?.asaas_customer_id
-  if (!asaasCustomerId) throw new CheckoutError("falha ao criar o cadastro de cobrança")
-
-  // PIX (checkout transparente): o QR é buscado depois via getPixQr(charge.id).
-  const charge = await provider.createCharge({
-    customerId: asaasCustomerId,
+  // 6) Checkout hospedado com assinatura RECORRENTE no cartão. externalReference =
+  // id da fatura → o webhook do 1º pagamento reconcilia e ativa. O cliente digita
+  // o cartão na página do Asaas; a recorrência mensal é automática.
+  const authUrl = (process.env.AUTH_URL || "").replace(/\/$/, "")
+  const checkout = await provider.createCheckout({
     value,
-    dueDate: dueInDays(3),
-    description: `Sapienza — ${input.produto} ${input.tier} — ${period}`,
+    description: `Sapienza — ${input.produto} ${input.tier}`,
     externalReference: invoice.id,
-    billingType: "PIX",
+    nextDueDate: dueInDays(0),
+    customer: { name: input.name, taxId: input.taxId, email },
+    successUrl: `${authUrl}/login?assinou=1`,
+    cancelUrl: `${authUrl}/assinar?produto=${input.produto}&tier=${input.tier}`,
   })
   await db.execute(sql`
-    UPDATE public.invoices SET provider_charge_id = ${charge.id}, payment_url = ${charge.invoiceUrl},
+    UPDATE public.invoices SET provider_charge_id = ${checkout.id}, payment_url = ${checkout.url},
            due_date = ${dueInDays(3)}::date
      WHERE id = ${invoice.id}::uuid
   `)
 
-  return { tenantId, invoiceId: invoice.id, chargeId: charge.id }
+  return { tenantId, invoiceId: invoice.id, checkoutUrl: checkout.url }
 }

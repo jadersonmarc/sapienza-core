@@ -21,8 +21,8 @@ class FakeProvider implements PaymentProvider {
   async createCharge(input: { externalReference: string }): Promise<Charge> {
     return { id: "pay_" + input.externalReference.slice(0, 6), invoiceUrl: "https://asaas/i/checkout", status: "PENDING" }
   }
-  async getPixQr() {
-    return { encodedImage: "QRB64", payload: "000201...pix" }
+  async createCheckout(input: { externalReference: string }) {
+    return { id: "chk_" + input.externalReference.slice(0, 6), url: "https://asaas/checkout/x" }
   }
 }
 
@@ -53,7 +53,7 @@ maybe("checkoutSignup", () => {
   })
 
   it("cria conta em past_due + cobrança; o webhook de pagamento ativa", async () => {
-    const { tenantId, invoiceId, chargeId } = await checkoutSignup({
+    const { tenantId, invoiceId, checkoutUrl } = await checkoutSignup({
       name: "Cliente Checkout",
       taxId: "12345678000199",
       email: "novo@cliente.com",
@@ -62,7 +62,7 @@ maybe("checkoutSignup", () => {
       tier: "pro",
     })
     expect(invoiceId).toBeTruthy()
-    expect(chargeId).toMatch(/^pay_/)
+    expect(checkoutUrl).toBe("https://asaas/checkout/x")
 
     // owner criado e loga com a senha escolhida
     const [u] = await raw<{ password_hash: string }[]>`SELECT password_hash FROM public.users WHERE email='novo@cliente.com'`

@@ -15,18 +15,29 @@ export type ChargeInput = {
   billingType?: "PIX" | "BOLETO" | "UNDEFINED" // UNDEFINED = cliente escolhe
 }
 export type Charge = { id: string; invoiceUrl: string; status: string }
-/** QR do PIX para o checkout transparente (mostrado na nossa página). */
-export type PixQr = { encodedImage: string; payload: string; expiresAt?: string }
+
+// Checkout hospedado com assinatura RECORRENTE no cartão. O cliente digita o
+// cartão na página do Asaas (nunca no nosso servidor); o Asaas cobra todo mês.
+export type CheckoutInput2 = {
+  value: number
+  description: string
+  externalReference: string // id da nossa fatura de ativação (p/ o webhook reconciliar)
+  nextDueDate: string // "YYYY-MM-DD" — 1ª cobrança
+  customer: { name: string; taxId: string; email: string }
+  successUrl: string
+  cancelUrl: string
+}
+export type CheckoutSession = { id: string; url: string }
 
 export interface PaymentProvider {
   /** Há credenciais configuradas (senão não dá para cobrar). */
   configured(): boolean
   /** Cria/atualiza o cliente e devolve o id no provedor. */
   upsertCustomer(input: CustomerInput): Promise<{ id: string }>
-  /** Emite uma cobrança e devolve id + link de pagamento (página Pix/boleto). */
+  /** Emite uma cobrança avulsa (usada no excedente do fechamento mensal). */
   createCharge(input: ChargeInput): Promise<Charge>
-  /** QR Code + copia-e-cola do PIX de uma cobrança (checkout transparente). */
-  getPixQr(chargeId: string): Promise<PixQr>
+  /** Cria a sessão de checkout hospedado (assinatura recorrente no cartão). */
+  createCheckout(input: CheckoutInput2): Promise<CheckoutSession>
 }
 
 export class PaymentError extends Error {
@@ -96,12 +107,20 @@ class Asaas implements PaymentProvider {
     return { id: r.id, invoiceUrl: r.invoiceUrl, status: r.status }
   }
 
-  async getPixQr(chargeId: string): Promise<PixQr> {
-    const r = await this.req<{ encodedImage: string; payload: string; expirationDate?: string }>(
-      "GET",
-      `/payments/${chargeId}/pixQrCode`,
-    )
-    return { encodedImage: r.encodedImage, payload: r.payload, expiresAt: r.expirationDate }
+  async createCheckout(input: CheckoutInput2): Promise<CheckoutSession> {
+    const r = await this.req<{ id: string; link?: string }>("POST", "/checkouts", {
+      billingTypes: ["CREDIT_CARD"],
+      chargeTypes: ["RECURRENT"],
+      minutesToExpire: 60,
+      callback: { successUrl: input.successUrl, cancelUrl: input.cancelUrl, expiredUrl: input.cancelUrl },
+      items: [{ name: input.description, value: input.value, quantity: 1 }],
+      customerData: { name: input.customer.name, cpfCnpj: input.customer.taxId, email: input.customer.email },
+      subscription: { cycle: "MONTHLY", nextDueDate: input.nextDueDate },
+      externalReference: input.externalReference,
+    })
+    // Prefere o link retornado; senão monta pela base (sandbox vs produção).
+    const base = this.baseUrl.includes("sandbox") ? "https://sandbox.asaas.com" : "https://www.asaas.com"
+    return { id: r.id, url: r.link || `${base}/checkoutSession/show?id=${r.id}` }
   }
 }
 
