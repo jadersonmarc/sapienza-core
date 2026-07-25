@@ -210,12 +210,10 @@ export async function regenerateContent(
 export async function publishContent(
   ctx: MotorCtx,
   id: string,
-): Promise<{ published: { platform: Platform; url: string }[]; failures?: { platform: Platform; error: string }[] }> {
-  return call<{ published: { platform: Platform; url: string }[]; failures?: { platform: Platform; error: string }[] }>(
-    ctx,
-    `/api/v1/content/${id}/publish`,
-    { method: "POST", body: JSON.stringify({}) },
-  )
+): Promise<{ async?: boolean }> {
+  // Publicação é em segundo plano no Motor: responde 202 { async: true }. O
+  // resultado (ou o erro) aparece na peça depois (status + publish_error).
+  return call<{ async?: boolean }>(ctx, `/api/v1/content/${id}/publish`, { method: "POST", body: JSON.stringify({}) })
 }
 
 export async function getChannels(ctx: MotorCtx): Promise<ChannelsStatus> {

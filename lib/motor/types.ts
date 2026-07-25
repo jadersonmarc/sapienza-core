@@ -17,6 +17,7 @@ export type ContentItem = {
   published_at: string | null
   regen_count: number
   image_url: string | null
+  publish_error: string | null
   title?: string | null
 }
 

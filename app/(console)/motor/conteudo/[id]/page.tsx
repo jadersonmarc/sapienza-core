@@ -83,6 +83,12 @@ export default async function ContentDetailPage({
           <DeleteButton id={item.id} />
         </div>
 
+        {item.publish_error && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            Falha na última publicação: {item.publish_error}
+          </p>
+        )}
+
         {/* Editor coeso, mostrado direto — o campo de texto É a peça (sem cópia
             só-leitura duplicada nem toggle escondendo a edição). */}
         <div className="max-w-3xl space-y-3">
