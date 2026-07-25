@@ -52,7 +52,8 @@ export default async function AssinarPage({
             <span className="text-sm text-muted-foreground">/mês</span>
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            Crie sua conta, pague por PIX e o acesso é liberado assim que o pagamento é confirmado.
+            Crie sua conta e assine no cartão. Cobrança mensal recorrente; o acesso é liberado
+            assim que o pagamento é confirmado.
           </p>
         </div>
       </div>

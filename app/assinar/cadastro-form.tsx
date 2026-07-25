@@ -93,6 +93,58 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
         {mismatch && <span className="text-xs text-destructive">As senhas não coincidem.</span>}
       </label>
 
+      <div className="mt-2 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold">Pagamento no cartão</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Assinatura mensal, cobrança recorrente. Cancele quando quiser.
+        </p>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Número do cartão</span>
+        <input
+          name="cardNumber"
+          required
+          inputMode="numeric"
+          autoComplete="cc-number"
+          placeholder="0000 0000 0000 0000"
+          className={field}
+        />
+      </label>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Nome impresso no cartão</span>
+        <input name="cardHolder" required autoComplete="cc-name" className={field} />
+      </label>
+      <div className="grid grid-cols-3 gap-2">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Mês</span>
+          <input name="cardMonth" required inputMode="numeric" autoComplete="cc-exp-month" placeholder="MM" maxLength={2} className={field} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Ano</span>
+          <input name="cardYear" required inputMode="numeric" autoComplete="cc-exp-year" placeholder="AAAA" maxLength={4} className={field} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">CVV</span>
+          <input name="cardCcv" required inputMode="numeric" autoComplete="cc-csc" placeholder="123" maxLength={4} className={field} />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-[1fr_1fr] gap-2">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">CEP</span>
+          <input name="postalCode" required inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" className={field} />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted-foreground">Número</span>
+          <input name="addressNumber" required inputMode="numeric" autoComplete="off" className={field} />
+        </label>
+      </div>
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Telefone (com DDD)</span>
+        <input name="phone" required inputMode="tel" autoComplete="tel" placeholder="(11) 90000-0000" className={field} />
+      </label>
+
       {state.error && (
         <p className="text-sm text-destructive" role="alert">
           {state.error}
@@ -104,10 +156,10 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
         disabled={pending || !strong || mismatch || confirm.length === 0}
         className="mt-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {pending ? "Criando conta…" : "Criar conta e ir para o pagamento"}
+        {pending ? "Processando pagamento…" : "Assinar e criar conta"}
       </button>
       <p className="text-center font-mono text-xs text-muted-foreground">
-        pagamento por PIX · acesso liberado assim que confirmado
+        cobrança recorrente no cartão · acesso liberado após a confirmação
       </p>
     </form>
   )

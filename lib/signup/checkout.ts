@@ -18,6 +18,12 @@ export type CheckoutInput = {
   password: string
   produto: ProdutoId
   tier: string
+  remoteIp: string
+  // Cartão (transparente) + dados do titular exigidos pelo Asaas.
+  card: { number: string; holderName: string; expiryMonth: string; expiryYear: string; ccv: string }
+  postalCode: string
+  addressNumber: string
+  phone: string
 }
 
 export class CheckoutError extends Error {}
@@ -35,12 +41,30 @@ function dueInDays(days: number): string {
 
 export async function checkoutSignup(
   input: CheckoutInput,
-): Promise<{ tenantId: string; invoiceId: string; checkoutUrl: string }> {
+): Promise<{ tenantId: string; invoiceId: string }> {
   const email = input.email.trim().toLowerCase()
   if (!PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
   if (!TIERS.has(input.tier)) throw new CheckoutError("plano inválido")
   const pwErr = validatePasswordStrength(input.password)
   if (pwErr) throw new CheckoutError(pwErr)
+  const card = {
+    number: input.card.number.replace(/\s/g, ""),
+    holderName: input.card.holderName.trim(),
+    expiryMonth: input.card.expiryMonth.trim(),
+    expiryYear: input.card.expiryYear.trim(),
+    ccv: input.card.ccv.trim(),
+  }
+  const postalCode = input.postalCode.replace(/\D/g, "")
+  const addressNumber = input.addressNumber.trim()
+  const phone = input.phone.replace(/\D/g, "")
+  if (card.number.length < 13) throw new CheckoutError("número do cartão inválido")
+  if (!card.holderName) throw new CheckoutError("informe o nome impresso no cartão")
+  if (card.expiryMonth.length !== 2 || card.expiryYear.length !== 4)
+    throw new CheckoutError("validade do cartão inválida (MM e AAAA)")
+  if (card.ccv.length < 3) throw new CheckoutError("CVV inválido")
+  if (postalCode.length !== 8) throw new CheckoutError("CEP inválido (8 dígitos)")
+  if (!addressNumber) throw new CheckoutError("informe o número do endereço")
+  if (phone.length < 10) throw new CheckoutError("telefone inválido (com DDD)")
 
   const provider = paymentProvider()
   if (!provider.configured()) throw new CheckoutError("pagamento indisponível no momento")
@@ -83,25 +107,35 @@ export async function checkoutSignup(
     RETURNING id
   `)) as unknown as { id: string }[]
 
-  // 6) Checkout hospedado com assinatura RECORRENTE no cartão. externalReference =
-  // id da fatura → o webhook do 1º pagamento reconcilia e ativa. O cliente digita
-  // o cartão na página do Asaas; a recorrência mensal é automática.
-  // Base absoluta (com fallback) e SEM query string — o Asaas recusa callback com "?".
-  const base = (process.env.AUTH_URL || "https://console.sapienzalabs.com.br").replace(/\/$/, "")
-  const checkout = await provider.createCheckout({
+  // 6) Assinatura RECORRENTE no cartão (transparente). O 1º pagamento é capturado
+  // agora — cartão recusado estoura PaymentError aqui e a conta segue past_due.
+  // externalReference = id da fatura → o webhook do pagamento reconcilia e ativa.
+  const taxId = input.taxId.replace(/\D/g, "")
+  const [tenant] = (await db.execute(sql`
+    SELECT asaas_customer_id FROM public.tenants WHERE id = ${tenantId}::uuid
+  `)) as unknown as { asaas_customer_id: string | null }[]
+  if (!tenant?.asaas_customer_id) throw new CheckoutError("não foi possível criar o cliente de cobrança")
+
+  const sub = await provider.createCardSubscription({
+    customerId: tenant.asaas_customer_id,
     value,
     description: `Sapienza — ${input.produto} ${input.tier}`,
     externalReference: invoice.id,
     nextDueDate: dueInDays(0),
-    customer: { name: input.name, taxId: input.taxId, email },
-    successUrl: `${base}/login`,
-    cancelUrl: `${base}/assinar`,
+    remoteIp: input.remoteIp,
+    card,
+    holder: { name: input.name, email, taxId, postalCode, addressNumber, phone },
   })
+
+  // Guarda o id da assinatura no provedor (para cancelar a recorrência depois).
   await db.execute(sql`
-    UPDATE public.invoices SET provider_charge_id = ${checkout.id}, payment_url = ${checkout.url},
-           due_date = ${dueInDays(3)}::date
+    UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, updated_at = now()
+     WHERE tenant_id = ${tenantId}::uuid AND produto = ${input.produto}
+  `)
+  await db.execute(sql`
+    UPDATE public.invoices SET provider_charge_id = ${sub.id}, due_date = ${dueInDays(3)}::date
      WHERE id = ${invoice.id}::uuid
   `)
 
-  return { tenantId, invoiceId: invoice.id, checkoutUrl: checkout.url }
+  return { tenantId, invoiceId: invoice.id }
 }

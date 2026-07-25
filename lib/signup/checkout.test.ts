@@ -21,9 +21,10 @@ class FakeProvider implements PaymentProvider {
   async createCharge(input: { externalReference: string }): Promise<Charge> {
     return { id: "pay_" + input.externalReference.slice(0, 6), invoiceUrl: "https://asaas/i/checkout", status: "PENDING" }
   }
-  async createCheckout(input: { externalReference: string }) {
-    return { id: "chk_" + input.externalReference.slice(0, 6), url: "https://asaas/checkout/x" }
+  async createCardSubscription(input: { externalReference: string }) {
+    return { id: "sub_" + input.externalReference.slice(0, 6), status: "ACTIVE" }
   }
+  async cancelSubscription() {}
 }
 
 maybe("checkoutSignup", () => {
@@ -37,7 +38,7 @@ maybe("checkoutSignup", () => {
     raw = postgres(dsn!, { prepare: false, max: 1 })
     await raw.unsafe(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;
                       DROP SCHEMA IF EXISTS bus CASCADE;`)
-    for (const f of ["0000_control_plane.sql", "0001_product_rules_usage_agg.sql", "0002_billing_identity.sql", "0003_invoice_payment.sql"]) {
+    for (const f of ["0000_control_plane.sql", "0001_product_rules_usage_agg.sql", "0002_billing_identity.sql", "0003_invoice_payment.sql", "0004_subscription_provider_id.sql"]) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     await raw`INSERT INTO public.plans (produto, tier, metric, mensal, incluso, canais, excedente_unitario, piso)
@@ -52,17 +53,25 @@ maybe("checkoutSignup", () => {
     await raw?.end()
   })
 
-  it("cria conta em past_due + cobrança; o webhook de pagamento ativa", async () => {
-    const { tenantId, invoiceId, checkoutUrl } = await checkoutSignup({
+  const validCard = {
+    card: { number: "5162306219378829", holderName: "CLIENTE CHECKOUT", expiryMonth: "05", expiryYear: "2030", ccv: "318" },
+    postalCode: "89223-005",
+    addressNumber: "277",
+    phone: "(47) 3003-3030",
+    remoteIp: "116.213.44.5",
+  }
+
+  it("cria conta em past_due + assinatura no cartão; o webhook de pagamento ativa", async () => {
+    const { tenantId, invoiceId } = await checkoutSignup({
       name: "Cliente Checkout",
       taxId: "12345678000199",
       email: "novo@cliente.com",
       password: "SenhaForte123",
       produto: "margot",
       tier: "pro",
+      ...validCard,
     })
     expect(invoiceId).toBeTruthy()
-    expect(checkoutUrl).toBe("https://asaas/checkout/x")
 
     // owner criado e loga com a senha escolhida
     const [u] = await raw<{ password_hash: string }[]>`SELECT password_hash FROM public.users WHERE email='novo@cliente.com'`
@@ -77,7 +86,12 @@ maybe("checkoutSignup", () => {
       SELECT id, status, total_brl, provider_charge_id FROM public.invoices WHERE tenant_id=${tenantId}::uuid`
     expect(inv.status).toBe("issued")
     expect(Number(inv.total_brl)).toBe(700)
-    expect(inv.provider_charge_id).toMatch(/^pay_/)
+    expect(inv.provider_charge_id).toMatch(/^sub_/)
+
+    // guardou o id da assinatura recorrente (p/ cancelar depois)
+    const [s] = await raw<{ provider_sub_id: string }[]>`
+      SELECT provider_sub_id FROM public.subscriptions WHERE tenant_id=${tenantId}::uuid`
+    expect(s.provider_sub_id).toMatch(/^sub_/)
 
     // webhook: pagou → fatura paga + assinatura ativa (conta liberada)
     await applyPaymentReceived(inv.provider_charge_id, inv.id)
@@ -90,11 +104,11 @@ maybe("checkoutSignup", () => {
   it("recusa senha fraca e produto inválido, e e-mail já com conta ativa", async () => {
     const { CheckoutError } = await import("@/lib/signup/checkout")
     await expect(
-      checkoutSignup({ name: "X", taxId: "1", email: "a@b.com", password: "fraca", produto: "margot", tier: "pro" }),
+      checkoutSignup({ name: "X", taxId: "1", email: "a@b.com", password: "fraca", produto: "margot", tier: "pro", ...validCard }),
     ).rejects.toThrow(CheckoutError)
     // 'novo@cliente.com' já foi cadastrado no teste anterior → e-mail duplicado
     await expect(
-      checkoutSignup({ name: "Y", taxId: "12345678000199", email: "novo@cliente.com", password: "SenhaForte123", produto: "margot", tier: "pro" }),
+      checkoutSignup({ name: "Y", taxId: "12345678000199", email: "novo@cliente.com", password: "SenhaForte123", produto: "margot", tier: "pro", ...validCard }),
     ).rejects.toThrow(/já existe uma conta/)
   })
 
