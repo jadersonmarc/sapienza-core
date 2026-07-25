@@ -4,7 +4,7 @@ import { redirect } from "next/navigation"
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { checkoutSignup, CheckoutError } from "@/lib/signup/checkout"
-import { paymentProvider } from "@/lib/payments/asaas"
+import { paymentProvider, PaymentError } from "@/lib/payments/asaas"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 export type SignupState = { error?: string }
@@ -26,7 +26,10 @@ export async function signupAction(_prev: SignupState, form: FormData): Promise<
     })
     invoiceId = r.invoiceId
   } catch (e) {
-    return { error: e instanceof CheckoutError ? e.message : "Não foi possível criar sua conta." }
+    console.error("[signup] falha ao criar conta:", e)
+    if (e instanceof CheckoutError) return { error: e.message }
+    if (e instanceof PaymentError) return { error: `Pagamento (Asaas): ${e.message}` }
+    return { error: `Não foi possível criar sua conta. ${e instanceof Error ? e.message : ""}`.trim() }
   }
   redirect(`/assinar/pagamento?invoice=${invoiceId}`)
 }

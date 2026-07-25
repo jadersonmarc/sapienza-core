@@ -92,10 +92,10 @@ maybe("checkoutSignup", () => {
     await expect(
       checkoutSignup({ name: "X", taxId: "1", email: "a@b.com", password: "fraca", produto: "margot", tier: "pro" }),
     ).rejects.toThrow(CheckoutError)
-    // 'novo@cliente.com' já tem assinatura ativa (foi pago no teste anterior)
+    // 'novo@cliente.com' já foi cadastrado no teste anterior → e-mail duplicado
     await expect(
       checkoutSignup({ name: "Y", taxId: "12345678000199", email: "novo@cliente.com", password: "SenhaForte123", produto: "margot", tier: "pro" }),
-    ).rejects.toThrow(/já existe uma conta ativa/)
+    ).rejects.toThrow(/já existe uma conta/)
   })
 
   it("a rota pública exige x-checkout-secret (401 sem)", async () => {

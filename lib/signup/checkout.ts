@@ -45,15 +45,13 @@ export async function checkoutSignup(
   const provider = paymentProvider()
   if (!provider.configured()) throw new CheckoutError("pagamento indisponível no momento")
 
-  // Guarda: e-mail já dono de um tenant com assinatura ativa → não reprovisiona/re-cobra.
+  // Guarda: e-mail já cadastrado → não recria (o createTenant falharia no unique).
+  // Mensagem clara para o cliente (evita o erro cru numa 2ª tentativa).
   const existing = (await db.execute(sql`
-    SELECT 1 FROM public.subscriptions s
-      JOIN public.memberships m ON m.tenant_id = s.tenant_id AND m.role = 'owner'
-      JOIN public.users u ON u.id = m.user_id
-     WHERE u.email = ${email} AND s.status = 'active' LIMIT 1
+    SELECT 1 FROM public.users WHERE email = ${email} LIMIT 1
   `)) as unknown as unknown[]
   if (existing.length > 0) {
-    throw new CheckoutError("já existe uma conta ativa com este e-mail")
+    throw new CheckoutError("já existe uma conta com este e-mail — faça login ou use outro e-mail")
   }
 
   // 1) tenant + owner (senha escolhida pelo cliente → loga já)
