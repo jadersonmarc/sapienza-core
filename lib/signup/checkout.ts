@@ -86,15 +86,16 @@ export async function checkoutSignup(
   // 6) Checkout hospedado com assinatura RECORRENTE no cartão. externalReference =
   // id da fatura → o webhook do 1º pagamento reconcilia e ativa. O cliente digita
   // o cartão na página do Asaas; a recorrência mensal é automática.
-  const authUrl = (process.env.AUTH_URL || "").replace(/\/$/, "")
+  // Base absoluta (com fallback) e SEM query string — o Asaas recusa callback com "?".
+  const base = (process.env.AUTH_URL || "https://console.sapienzalabs.com.br").replace(/\/$/, "")
   const checkout = await provider.createCheckout({
     value,
     description: `Sapienza — ${input.produto} ${input.tier}`,
     externalReference: invoice.id,
     nextDueDate: dueInDays(0),
     customer: { name: input.name, taxId: input.taxId, email },
-    successUrl: `${authUrl}/login?assinou=1`,
-    cancelUrl: `${authUrl}/assinar?produto=${input.produto}&tier=${input.tier}`,
+    successUrl: `${base}/login`,
+    cancelUrl: `${base}/assinar`,
   })
   await db.execute(sql`
     UPDATE public.invoices SET provider_charge_id = ${checkout.id}, payment_url = ${checkout.url},
