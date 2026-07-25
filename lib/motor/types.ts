@@ -96,6 +96,7 @@ export type EditorConfig = {
   format: ContentFormat
   model: string | null
   enabled: boolean
+  cadence_days: number
 }
 
 export type SetupStatus = {

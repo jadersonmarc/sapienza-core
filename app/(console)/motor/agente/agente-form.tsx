@@ -86,11 +86,24 @@ export function AgenteForm({ cfg }: { cfg: EditorConfig }) {
             <option value="instagram">Post de Instagram</option>
           </select>
         </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm">
-          <input type="checkbox" name="enabled" defaultChecked={cfg.enabled} className="size-4" />
-          Automação ativa (gerar peças automaticamente)
-        </label>
+        <div className="space-y-1">
+          <label className={label} htmlFor="cadence_days">
+            Frequência da automação
+          </label>
+          <select id="cadence_days" name="cadence_days" defaultValue={String(cfg.cadence_days)} className={field}>
+            <option value="1">Diária</option>
+            <option value="3">A cada 3 dias</option>
+            <option value="7">Semanal</option>
+            <option value="14">Quinzenal</option>
+            <option value="30">Mensal</option>
+          </select>
+        </div>
       </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="enabled" defaultChecked={cfg.enabled} className="size-4" />
+        Automação ativa (gerar peças automaticamente)
+      </label>
 
       <div className="flex items-center gap-3">
         <button

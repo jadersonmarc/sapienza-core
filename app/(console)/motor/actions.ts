@@ -247,6 +247,7 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       .map((t) => t.trim())
       .filter(Boolean)
     const model = String(formData.get("model") ?? "").trim()
+    const cadence = Number(formData.get("cadence_days") ?? 7)
     await saveEditorConfig(ctx, {
       system_prompt: String(formData.get("system_prompt") ?? "").trim(),
       tone: String(formData.get("tone") ?? "").trim(),
@@ -254,6 +255,7 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       format,
       model: model || null,
       enabled: formData.get("enabled") === "on",
+      cadence_days: Number.isFinite(cadence) ? cadence : 7,
     })
     revalidatePath("/motor/agente")
     revalidatePath("/motor")
