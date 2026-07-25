@@ -88,6 +88,16 @@ export type AnalysesResult = {
   types: { type: AnalysisType; label: string }[]
 }
 
+// Config do agente de criação (Margot Editora) por tenant.
+export type EditorConfig = {
+  system_prompt: string
+  tone: string
+  themes: string[]
+  format: ContentFormat
+  model: string | null
+  enabled: boolean
+}
+
 export type SetupStatus = {
   active: boolean
   tier: string | null

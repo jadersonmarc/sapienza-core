@@ -10,6 +10,7 @@ import type {
   ContentFormat,
   ContentItem,
   ContentStatus,
+  EditorConfig,
   Platform,
   Proposal,
   SetupStatus,
@@ -254,6 +255,14 @@ export async function disconnectChannel(ctx: MotorCtx, platform: Platform): Prom
 
 export async function getSetup(ctx: MotorCtx): Promise<SetupStatus> {
   return call<SetupStatus>(ctx, "/api/v1/setup")
+}
+
+export async function getEditorConfig(ctx: MotorCtx): Promise<EditorConfig> {
+  return call<EditorConfig>(ctx, "/api/v1/config")
+}
+
+export async function saveEditorConfig(ctx: MotorCtx, cfg: EditorConfig): Promise<{ ok: boolean }> {
+  return call<{ ok: boolean }>(ctx, "/api/v1/config", { method: "PUT", body: JSON.stringify(cfg) })
 }
 
 export async function generateSocialCaption(

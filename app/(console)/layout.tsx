@@ -39,6 +39,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             label: produtoLabel("motor"),
             items: [
               { href: "/motor", label: "Visão geral", exact: true },
+              { href: "/motor/agente", label: "Agente" },
               { href: "/motor/conteudo", label: "Conteúdo" },
               { href: "/motor/midia", label: "Mídia" },
               { href: "/motor/calendario", label: "Calendário" },

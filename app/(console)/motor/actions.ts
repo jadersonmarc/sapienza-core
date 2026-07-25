@@ -13,6 +13,7 @@ import {
   publishContent,
   connectChannel,
   disconnectChannel,
+  saveEditorConfig,
   generatePieceImage,
   setPieceImage,
   runAnalysis,
@@ -232,6 +233,33 @@ export async function runAnalysisAction(_prev: ActionState, formData: FormData):
     return { ok: true }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao analisar" }
+  }
+}
+
+/** Salva a config do agente de criação (aba "Agente"). */
+export async function saveEditorConfigAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const raw = String(formData.get("format") ?? "blog")
+    const format: ContentFormat = raw === "linkedin" || raw === "instagram" ? raw : "blog"
+    const themes = String(formData.get("themes") ?? "")
+      .split("\n")
+      .map((t) => t.trim())
+      .filter(Boolean)
+    const model = String(formData.get("model") ?? "").trim()
+    await saveEditorConfig(ctx, {
+      system_prompt: String(formData.get("system_prompt") ?? "").trim(),
+      tone: String(formData.get("tone") ?? "").trim(),
+      themes,
+      format,
+      model: model || null,
+      enabled: formData.get("enabled") === "on",
+    })
+    revalidatePath("/motor/agente")
+    revalidatePath("/motor")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao salvar" }
   }
 }
 

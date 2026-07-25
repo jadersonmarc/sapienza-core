@@ -1,0 +1,108 @@
+"use client"
+
+import { useActionState } from "react"
+import { saveEditorConfigAction, type ActionState } from "../actions"
+import type { EditorConfig } from "@/lib/motor/types"
+
+const initial: ActionState = {}
+
+const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+const label = "text-sm font-medium"
+
+// Modelos oferecidos. Vazio = padrão do produto (Opus). Sonnet/Haiku para quem
+// quer mais econômico. O id segue o que o Motor passa à Anthropic.
+const MODELOS = [
+  { value: "", label: "Padrão — mais capaz (recomendado)" },
+  { value: "claude-sonnet-5", label: "Sonnet — equilíbrio" },
+  { value: "claude-haiku-4-5", label: "Haiku — rápido e econômico" },
+]
+
+export function AgenteForm({ cfg }: { cfg: EditorConfig }) {
+  const [state, action, pending] = useActionState(saveEditorConfigAction, initial)
+
+  return (
+    <form action={action} className="space-y-4">
+      <div className="space-y-1">
+        <label className={label} htmlFor="system_prompt">
+          Prompt do sistema (voz da marca)
+        </label>
+        <textarea
+          id="system_prompt"
+          name="system_prompt"
+          rows={5}
+          defaultValue={cfg.system_prompt}
+          placeholder="Ex.: Escreva como uma consultoria próxima e prática para PMEs. Evite jargão; foque em ganhos concretos."
+          className={field}
+        />
+        <p className="text-xs text-muted-foreground">
+          Some às regras base (pt-BR, sem inventar dados). Vale para a automação e a criação manual.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className={label} htmlFor="tone">
+            Tom
+          </label>
+          <input id="tone" name="tone" defaultValue={cfg.tone} placeholder="Ex.: profissional e direto" className={field} />
+        </div>
+        <div className="space-y-1">
+          <label className={label} htmlFor="model">
+            Modelo
+          </label>
+          <select id="model" name="model" defaultValue={cfg.model ?? ""} className={field}>
+            {MODELOS.map((m) => (
+              <option key={m.value} value={m.value}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className={label} htmlFor="themes">
+          Temas / áreas a priorizar
+        </label>
+        <textarea
+          id="themes"
+          name="themes"
+          rows={4}
+          defaultValue={cfg.themes.join("\n")}
+          placeholder={"Um por linha, ex.:\nautomação de atendimento\nnota fiscal eletrônica\nCRM para PME"}
+          className={field}
+        />
+        <p className="text-xs text-muted-foreground">A automação escolhe um tema novo dentre estas áreas.</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className={label} htmlFor="format">
+            Formato padrão da automação
+          </label>
+          <select id="format" name="format" defaultValue={cfg.format} className={field}>
+            <option value="blog">Blog (artigo)</option>
+            <option value="linkedin">Post de LinkedIn</option>
+            <option value="instagram">Post de Instagram</option>
+          </select>
+        </div>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <input type="checkbox" name="enabled" defaultChecked={cfg.enabled} className="size-4" />
+          Automação ativa (gerar peças automaticamente)
+        </label>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          {pending ? "Salvando…" : "Salvar"}
+        </button>
+        {state.error && <span className="text-sm text-destructive">{state.error}</span>}
+        {state.ok && <span className="text-sm text-muted-foreground">Configuração salva.</span>}
+      </div>
+    </form>
+  )
+}
