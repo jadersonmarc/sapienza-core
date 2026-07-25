@@ -23,9 +23,10 @@ class FakeProvider implements PaymentProvider {
     this.charges.push({ customerId: input.customerId, value: input.value, externalReference: input.externalReference })
     return { id: "pay_" + this.charges.length, invoiceUrl: "https://asaas/i/pay", status: "PENDING" }
   }
-  async createCheckout(input: { externalReference: string }) {
-    return { id: "chk_" + input.externalReference.slice(0, 6), url: "https://asaas/checkout/x" }
+  async createCardSubscription(input: { externalReference: string }) {
+    return { id: "sub_" + input.externalReference.slice(0, 6), status: "ACTIVE" }
   }
+  async cancelSubscription() {}
 }
 
 maybe("closeTenantInvoice", () => {
@@ -44,6 +45,7 @@ maybe("closeTenantInvoice", () => {
       "0001_product_rules_usage_agg.sql",
       "0002_billing_identity.sql",
       "0003_invoice_payment.sql",
+      "0004_subscription_provider_id.sql",
     ]) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { schemaName } from "@/lib/provisioning/activate"
+import { cancelProviderSubscriptions } from "@/lib/provisioning/cancel"
 
 // Exclusão DEFINITIVA de um tenant (super-admin). Remove o data plane (schema
 // tenant_<id>) e as linhas de control-plane. Destrutivo e irreversível.
@@ -12,6 +13,9 @@ import { schemaName } from "@/lib/provisioning/activate"
 
 export async function deleteTenant(tenantId: string): Promise<boolean> {
   const schema = schemaName(tenantId)
+  // Antes de destruir: para a cobrança recorrente no cartão (Asaas). Best-effort;
+  // fora da tx porque é chamada externa.
+  await cancelProviderSubscriptions(tenantId)
   return db.transaction(async (tx) => {
     // Usuários ligados a este tenant (para limpar os que ficarem órfãos).
     const users = (await tx.execute(sql`
