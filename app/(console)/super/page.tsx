@@ -8,6 +8,7 @@ import { Eyebrow } from "@/components/eyebrow"
 import { NewTenantForm } from "./new-tenant-form"
 import { ActivateForm } from "./activate-form"
 import { CancelForm } from "./cancel-form"
+import { AccountActions } from "./account-actions"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -119,6 +120,7 @@ export default async function SuperPage() {
               <th className="px-4 py-2 font-medium">Slug</th>
               <th className="px-4 py-2 font-medium">Assinaturas ativas</th>
               <th className="px-4 py-2 font-medium">Produtos</th>
+              <th className="px-4 py-2 font-medium">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -128,6 +130,9 @@ export default async function SuperPage() {
                 <td className="px-4 py-2 font-mono text-xs">{r.slug}</td>
                 <td className="px-4 py-2">{r.ativos}</td>
                 <td className="px-4 py-2 font-mono text-xs">{r.produtos}</td>
+                <td className="px-4 py-2">
+                  <AccountActions tenantId={r.id} name={r.name} />
+                </td>
               </tr>
             ))}
           </tbody>

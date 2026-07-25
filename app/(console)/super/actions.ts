@@ -1,10 +1,13 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { sql } from "drizzle-orm"
+import { db } from "@/lib/db"
 import { currentContext } from "@/lib/console/current"
 import { createTenant } from "@/lib/tenant/create"
 import { activateSubscription } from "@/lib/provisioning/activate"
-import { cancelSubscription } from "@/lib/provisioning/cancel"
+import { cancelSubscription, cancelAllSubscriptions } from "@/lib/provisioning/cancel"
+import { deleteTenant } from "@/lib/tenant/delete"
 import { SeatError } from "@/lib/billing/seats"
 import type { ProdutoId } from "@/lib/pricing/load"
 
@@ -95,5 +98,45 @@ export async function cancelSubscriptionAction(
     return { ok: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : "falha ao cancelar assinatura" }
+  }
+}
+
+export type AccountState = { ok?: boolean; error?: string }
+
+// Cancelar a CONTA: cancela todas as assinaturas do tenant (bloqueia o acesso).
+export async function cancelAccountAction(_prev: AccountState, formData: FormData): Promise<AccountState> {
+  try {
+    await requireSuperadmin()
+    const tenantId = String(formData.get("tenant_id") ?? "")
+    if (!tenantId) return { error: "tenant inválido" }
+    if (formData.get("confirm") !== "on") return { error: "marque a confirmação" }
+    const n = await cancelAllSubscriptions(tenantId)
+    revalidatePath("/super")
+    return n > 0 ? { ok: true } : { error: "nenhuma assinatura ativa para cancelar" }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "falha ao cancelar a conta" }
+  }
+}
+
+// EXCLUIR a conta (definitivo): remove o tenant, o data plane e o usuário órfão.
+// Exige digitar o nome exato do cliente para confirmar.
+export async function deleteAccountAction(_prev: AccountState, formData: FormData): Promise<AccountState> {
+  try {
+    await requireSuperadmin()
+    const tenantId = String(formData.get("tenant_id") ?? "")
+    const confirmName = String(formData.get("confirm_name") ?? "").trim()
+    if (!tenantId) return { error: "tenant inválido" }
+    const rows = (await db.execute(
+      sql`SELECT name FROM public.tenants WHERE id = ${tenantId}::uuid`,
+    )) as unknown as { name: string }[]
+    if (rows.length === 0) return { error: "tenant não encontrado" }
+    if (confirmName !== rows[0].name) return { error: "o nome digitado não confere" }
+
+    const done = await deleteTenant(tenantId)
+    if (!done) return { error: "não foi possível excluir" }
+    revalidatePath("/super")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "falha ao excluir a conta" }
   }
 }

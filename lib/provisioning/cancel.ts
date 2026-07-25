@@ -16,3 +16,15 @@ export async function cancelSubscription(tenantId: string, produto: ProdutoId): 
   `)) as unknown as { id: string }[]
   return rows.length > 0
 }
+
+/** Cancela a CONTA: todas as assinaturas do tenant de uma vez (bloqueia o acesso
+ *  a todos os produtos). Devolve quantas foram canceladas. */
+export async function cancelAllSubscriptions(tenantId: string): Promise<number> {
+  const rows = (await db.execute(sql`
+    UPDATE public.subscriptions
+       SET status = 'canceled', updated_at = now()
+     WHERE tenant_id = ${tenantId}::uuid AND status <> 'canceled'
+     RETURNING id
+  `)) as unknown as { id: string }[]
+  return rows.length
+}
