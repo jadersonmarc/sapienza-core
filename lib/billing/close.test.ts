@@ -23,6 +23,9 @@ class FakeProvider implements PaymentProvider {
     this.charges.push({ customerId: input.customerId, value: input.value, externalReference: input.externalReference })
     return { id: "pay_" + this.charges.length, invoiceUrl: "https://asaas/i/pay", status: "PENDING" }
   }
+  async getPixQr() {
+    return { encodedImage: "QRB64", payload: "000201...pix" }
+  }
 }
 
 maybe("closeTenantInvoice", () => {

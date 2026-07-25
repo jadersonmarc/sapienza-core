@@ -15,6 +15,8 @@ export type ChargeInput = {
   billingType?: "PIX" | "BOLETO" | "UNDEFINED" // UNDEFINED = cliente escolhe
 }
 export type Charge = { id: string; invoiceUrl: string; status: string }
+/** QR do PIX para o checkout transparente (mostrado na nossa página). */
+export type PixQr = { encodedImage: string; payload: string; expiresAt?: string }
 
 export interface PaymentProvider {
   /** Há credenciais configuradas (senão não dá para cobrar). */
@@ -23,6 +25,8 @@ export interface PaymentProvider {
   upsertCustomer(input: CustomerInput): Promise<{ id: string }>
   /** Emite uma cobrança e devolve id + link de pagamento (página Pix/boleto). */
   createCharge(input: ChargeInput): Promise<Charge>
+  /** QR Code + copia-e-cola do PIX de uma cobrança (checkout transparente). */
+  getPixQr(chargeId: string): Promise<PixQr>
 }
 
 export class PaymentError extends Error {
@@ -90,6 +94,14 @@ class Asaas implements PaymentProvider {
       externalReference: input.externalReference,
     })
     return { id: r.id, invoiceUrl: r.invoiceUrl, status: r.status }
+  }
+
+  async getPixQr(chargeId: string): Promise<PixQr> {
+    const r = await this.req<{ encodedImage: string; payload: string; expirationDate?: string }>(
+      "GET",
+      `/payments/${chargeId}/pixQrCode`,
+    )
+    return { encodedImage: r.encodedImage, payload: r.payload, expiresAt: r.expirationDate }
   }
 }
 

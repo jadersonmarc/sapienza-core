@@ -33,7 +33,9 @@ function dueInDays(days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-export async function checkoutSignup(input: CheckoutInput): Promise<{ paymentUrl: string; tenantId: string }> {
+export async function checkoutSignup(
+  input: CheckoutInput,
+): Promise<{ tenantId: string; invoiceId: string; chargeId: string }> {
   const email = input.email.trim().toLowerCase()
   if (!PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
   if (!TIERS.has(input.tier)) throw new CheckoutError("plano inválido")
@@ -91,12 +93,14 @@ export async function checkoutSignup(input: CheckoutInput): Promise<{ paymentUrl
   )[0]?.asaas_customer_id
   if (!asaasCustomerId) throw new CheckoutError("falha ao criar o cadastro de cobrança")
 
+  // PIX (checkout transparente): o QR é buscado depois via getPixQr(charge.id).
   const charge = await provider.createCharge({
     customerId: asaasCustomerId,
     value,
     dueDate: dueInDays(3),
     description: `Sapienza — ${input.produto} ${input.tier} — ${period}`,
     externalReference: invoice.id,
+    billingType: "PIX",
   })
   await db.execute(sql`
     UPDATE public.invoices SET provider_charge_id = ${charge.id}, payment_url = ${charge.invoiceUrl},
@@ -104,5 +108,5 @@ export async function checkoutSignup(input: CheckoutInput): Promise<{ paymentUrl
      WHERE id = ${invoice.id}::uuid
   `)
 
-  return { paymentUrl: charge.invoiceUrl, tenantId }
+  return { tenantId, invoiceId: invoice.id, chargeId: charge.id }
 }

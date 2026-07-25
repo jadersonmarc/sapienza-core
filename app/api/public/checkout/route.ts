@@ -27,8 +27,10 @@ export async function POST(req: Request): Promise<Response> {
   } | null
   if (!b) return json(400, { error: "invalid payload" })
 
+  // Legado (site→core via CHECKOUT_SECRET). O fluxo novo é no console (/assinar);
+  // aqui devolvemos os ids para quem ainda integrar server-to-server.
   try {
-    const { paymentUrl } = await checkoutSignup({
+    const { tenantId, invoiceId } = await checkoutSignup({
       name: String(b.name ?? ""),
       taxId: String(b.taxId ?? ""),
       email: String(b.email ?? ""),
@@ -36,7 +38,7 @@ export async function POST(req: Request): Promise<Response> {
       produto: String(b.produto ?? "") as ProdutoId,
       tier: String(b.tier ?? ""),
     })
-    return json(200, { paymentUrl })
+    return json(200, { tenantId, invoiceId })
   } catch (e) {
     if (e instanceof CheckoutError) return json(422, { error: e.message })
     return json(500, { error: String(e instanceof Error ? e.message : e) })

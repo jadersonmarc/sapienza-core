@@ -1,5 +1,35 @@
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
+import { sendEmail } from "@/lib/email/send"
+import { paymentConfirmedEmail } from "@/lib/email/templates"
+
+// E-mail de confirmação (com link de login) ao owner. Best-effort: falha de
+// e-mail nunca derruba a reconciliação do webhook.
+async function notifyPaymentConfirmed(tenantId: string): Promise<void> {
+  try {
+    const rows = (await db.execute(sql`
+      SELECT u.email, COALESCE(u.name, t.legal_name, '') AS name, s.produto, s.tier
+        FROM public.memberships m
+        JOIN public.users u ON u.id = m.user_id
+        JOIN public.tenants t ON t.id = m.tenant_id
+        LEFT JOIN public.subscriptions s ON s.tenant_id = m.tenant_id
+       WHERE m.tenant_id = ${tenantId}::uuid AND m.role = 'owner'
+       LIMIT 1
+    `)) as unknown as { email: string; name: string; produto: string | null; tier: string | null }[]
+    const owner = rows[0]
+    if (!owner?.email) return
+    const loginUrl = `${(process.env.AUTH_URL || "").replace(/\/$/, "")}/login`
+    const { subject, html } = paymentConfirmedEmail({
+      name: owner.name,
+      loginUrl,
+      produto: owner.produto ?? undefined,
+      tier: owner.tier ?? undefined,
+    })
+    await sendEmail({ to: owner.email, subject, html })
+  } catch (e) {
+    console.error("[reconcile] falha ao enviar e-mail de confirmação:", e)
+  }
+}
 
 // Reconciliação de pagamento a partir do webhook do provedor. Idempotente: o
 // provedor pode reentregar o mesmo evento. A fatura é achada por externalReference
@@ -39,6 +69,7 @@ export async function applyPaymentReceived(chargeId: string | null, externalRef:
       VALUES (${inv.tenant_id}::uuid, 'invoice.paid', ${JSON.stringify({ invoice: inv.id })}::jsonb)
     `)
   })
+  await notifyPaymentConfirmed(inv.tenant_id)
   return true
 }
 

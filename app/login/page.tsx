@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button"
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string; assinou?: string }>
 }) {
   const session = await auth()
   if (session?.user) redirect("/")
-  const { error } = await searchParams
+  const { error, assinou } = await searchParams
 
   async function login(formData: FormData) {
     "use server"
@@ -36,6 +36,11 @@ export default async function LoginPage({
         <p className="text-sm text-muted-foreground">
           Acesse as ferramentas que sua empresa assina — num só lugar.
         </p>
+        {assinou && (
+          <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+            Pagamento confirmado! Entre com o e-mail e a senha que você cadastrou.
+          </p>
+        )}
       </div>
 
       <form action={login} className="space-y-4">
