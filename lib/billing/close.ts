@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { emitEvent } from "@/lib/events/emit"
-import { invoiceLine, monthIndex, overage } from "@/lib/billing/compute"
+import { monthIndex, overage } from "@/lib/billing/compute"
 import { loadPricing } from "@/lib/pricing/load"
 import { paymentProvider } from "@/lib/payments/asaas"
 
@@ -76,20 +76,19 @@ export async function closeTenantInvoice(tenantId: string, period: Period): Prom
     const piso = Number(r.piso)
     const exc = Number(r.excedente_unitario)
     const mi = monthIndex(new Date(r.activated_at), at)
-    const subtotal = invoiceLine({
-      tierMensal: mensal, piso, excedenteUnitario: exc,
-      count, incluso: r.incluso, monthIndex: mi,
-    })
+    // A mensalidade FIXA é cobrada pela assinatura recorrente no cartão (Asaas).
+    // O fechamento mensal cobra só o EXCEDENTE do uso — senão dobra o fixo.
+    const exced = overage(count, r.incluso, exc)
     lines.push({
       produto: r.produto,
       tier: r.tier,
-      mensal: mi >= 13 ? piso : mensal,
+      mensal: mi >= 13 ? piso : mensal, // informativo: cobrado na recorrência
       incluso: r.incluso,
       count,
-      excedente: overage(count, r.incluso, exc),
-      subtotal,
+      excedente: exced,
+      subtotal: exced,
     })
-    total += subtotal
+    total += exced
   }
 
   // Setup (uma vez): entra na PRIMEIRA fatura do tenant — a de menor período.

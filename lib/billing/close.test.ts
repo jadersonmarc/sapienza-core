@@ -60,7 +60,7 @@ maybe("closeTenantInvoice", () => {
     await raw?.end()
   })
 
-  it("1ª fatura: soma mensalidade + excedente + setup e emite a cobrança", async () => {
+  it("1ª fatura: só excedente + setup (o fixo vai na recorrência do cartão)", async () => {
     const [t] = await raw<{ id: string }[]>`
       INSERT INTO public.tenants (name, slug, legal_name, tax_id, billing_email, asaas_customer_id)
       VALUES ('Cliente','cli-close','Cliente LTDA','12345678000199','fin@cli.com','cus_real') RETURNING id`
@@ -73,8 +73,8 @@ maybe("closeTenantInvoice", () => {
 
     const { total } = await closeTenantInvoice(tenantId, "2026-07")
 
-    // 700 (mensal) + 50 (excedente) + 3000 (setup) = 3750.
-    expect(total).toBe(3750)
+    // Mensal (700) NÃO entra — vai na recorrência do cartão. 50 (excedente) + 3000 (setup) = 3050.
+    expect(total).toBe(3050)
 
     const [inv] = await raw<{ status: string; provider_charge_id: string; payment_url: string; due_date: string }[]>`
       SELECT status, provider_charge_id, payment_url, due_date FROM public.invoices
@@ -83,9 +83,9 @@ maybe("closeTenantInvoice", () => {
     expect(inv.payment_url).toBe("https://asaas/i/pay")
     expect(inv.due_date).toBeTruthy()
 
-    // A cobrança foi pelo valor total, referenciando a fatura.
+    // A cobrança avulsa é só do excedente + setup (o fixo é da recorrência).
     const charge = fake.charges.at(-1)!
-    expect(charge.value).toBe(3750)
+    expect(charge.value).toBe(3050)
     expect(charge.customerId).toBe("cus_real")
   })
 
