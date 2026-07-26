@@ -17,6 +17,7 @@ export function tierLabel(tier: string): string {
 const PRODUTO_LABELS: Record<string, string> = {
   margot: "Margot Atendente",
   motor: "Margot Editora",
+  combo: "Combo Sapienza",
 }
 
 export function produtoLabel(produto: string): string {

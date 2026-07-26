@@ -2,9 +2,8 @@
 
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
-import { checkoutSignup, CheckoutError } from "@/lib/signup/checkout"
+import { checkoutSignup, CheckoutError, type CheckoutProduto } from "@/lib/signup/checkout"
 import { PaymentError } from "@/lib/payments/asaas"
-import type { ProdutoId } from "@/lib/pricing/load"
 
 export type SignupState = { error?: string }
 
@@ -25,7 +24,7 @@ export async function signupAction(_prev: SignupState, form: FormData): Promise<
       taxId: String(form.get("taxId") ?? "").replace(/\D/g, ""),
       email: String(form.get("email") ?? "").trim(),
       password,
-      produto: String(form.get("produto") ?? "") as ProdutoId,
+      produto: String(form.get("produto") ?? "") as CheckoutProduto,
       tier: String(form.get("tier") ?? ""),
       remoteIp,
       card: {
