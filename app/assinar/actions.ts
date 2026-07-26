@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { signOut } from "@/auth"
 import { checkoutSignup, CheckoutError, type CheckoutProduto } from "@/lib/signup/checkout"
 import { PaymentError } from "@/lib/payments/asaas"
 
@@ -44,5 +45,10 @@ export async function signupAction(_prev: SignupState, form: FormData): Promise<
     if (e instanceof PaymentError) return { error: `Pagamento (Asaas): ${e.message}` }
     return { error: `Não foi possível criar sua conta. ${e instanceof Error ? e.message : ""}`.trim() }
   }
+  // Encerra QUALQUER sessão anterior (ex.: operador já logado no navegador) ANTES de
+  // ir ao login. Sem isso, o /login com sessão ativa cairia direto no painel da conta
+  // antiga — não na conta recém-criada. redirect:false só limpa o cookie; o redirect
+  // abaixo leva ao login (e lança NEXT_REDIRECT).
+  await signOut({ redirect: false })
   redirect("/login?assinou=1")
 }
