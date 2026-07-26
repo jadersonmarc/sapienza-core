@@ -14,6 +14,9 @@ import { loadPricing, type Pricing, type ProdutoId } from "@/lib/pricing/load"
 
 type PublicTier = { id: string; mensal: number; incluso: number; canais?: number }
 type PublicProduto = { nome: string; metric: string; tiers: PublicTier[] }
+// Combos POR TIER (margot + motor no mesmo tier) são VALOR público — o site exibe
+// de/por/economia. Não confundir com `combo_sistema_sapienza` (comercial, só --full).
+type PublicCombo = { tier: string; mensal: number; economia: number }
 type Comercial = {
   setup: Pricing["setup"]
   combo: Pricing["combo_sistema_sapienza"]
@@ -22,6 +25,7 @@ type Comercial = {
 type PublicPricing = {
   currency: Pricing["currency"]
   produtos: Record<ProdutoId, PublicProduto>
+  combos: PublicCombo[]
   comercial?: Comercial
 }
 
@@ -45,6 +49,7 @@ function project(pricing: Pricing, full: boolean): PublicPricing {
       margot: projectProduto(pricing.produtos.margot),
       motor: projectProduto(pricing.produtos.motor),
     },
+    combos: pricing.combos.map((c) => ({ tier: c.tier, mensal: c.mensal, economia: c.economia })),
   }
   if (full) {
     out.comercial = {
