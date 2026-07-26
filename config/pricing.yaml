@@ -37,6 +37,14 @@ produtos:
       max_regeneracoes_por_peca: 2       # 3ª = pedido customizado (excedente)
       revisao_manual_sapienza: false
       storage_mb: { start: 500, pro: 2000, scale: 5000 }  # cota da biblioteca de mídia por tier
+# Combos por tier: assinar Margot + Motor no MESMO tier, numa recorrência única a
+# preço reduzido. `mensal` = preço do combo; `economia` = desconto vs. soma dos avulsos
+# (mensal + economia DEVE bater com margot[tier].mensal + motor[tier].mensal).
+combos:
+  - { tier: start, mensal: 700,  economia: 100 }  # 400 + 400 = 800
+  - { tier: pro,   mensal: 1200, economia: 200 }  # 700 + 700 = 1400
+  - { tier: scale, mensal: 2000, economia: 400 }  # 1200 + 1200 = 2400
+# Legado (outro conceito comercial: setup + portas de pagamento; NÃO é o combo por tier).
 combo_sistema_sapienza:
   setup: 6000
   mensal_start: 1000

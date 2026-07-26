@@ -51,6 +51,15 @@ const pricingSchema = z.object({
     margot: produtoSchema,
     motor: produtoSchema,
   }),
+  combos: z
+    .array(
+      z.object({
+        tier: z.enum(["start", "pro", "scale"]),
+        mensal: z.number().nonnegative(),
+        economia: z.number().nonnegative(),
+      }),
+    )
+    .min(1),
   combo_sistema_sapienza: z.object({
     setup: z.number(),
     mensal_start: z.number(),
@@ -67,6 +76,8 @@ const pricingSchema = z.object({
 
 export type Pricing = z.infer<typeof pricingSchema>
 export type ProdutoId = keyof Pricing["produtos"]
+export type Combo = Pricing["combos"][number]
+export type TierId = Combo["tier"]
 
 let cached: Pricing | null = null
 
@@ -83,4 +94,16 @@ export function loadPricing(path?: string): Pricing {
 /** Piso da mensalidade de um produto = menor `mensal` entre os tiers (Degrau 13). */
 export function pisoDe(produto: Pricing["produtos"][ProdutoId]): number {
   return Math.min(...produto.tiers.map((t) => t.mensal))
+}
+
+/** Combo (margot + motor no mesmo tier) — undefined se o tier não tiver combo. */
+export function comboFor(tier: string, pricing: Pricing = loadPricing()): Combo | undefined {
+  return pricing.combos.find((c) => c.tier === tier)
+}
+
+/** Preço mensal do combo daquele tier. Lança se o tier não existir. */
+export function comboMensal(tier: string, pricing: Pricing = loadPricing()): number {
+  const combo = comboFor(tier, pricing)
+  if (!combo) throw new Error(`combo inexistente para o tier: ${tier}`)
+  return combo.mensal
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { join } from "node:path"
-import { loadPricing, pisoDe } from "./load"
+import { comboFor, comboMensal, loadPricing, pisoDe } from "./load"
 
 const yaml = join(process.cwd(), "config", "pricing.yaml")
 
@@ -45,5 +45,25 @@ describe("loadPricing", () => {
     const p = loadPricing(yaml)
     expect(pisoDe(p.produtos.margot)).toBe(400)
     expect(pisoDe(p.produtos.motor)).toBe(400)
+  })
+
+  it("materializa os combos por tier (margot + motor)", () => {
+    const p = loadPricing(yaml)
+    expect(p.combos.map((c) => [c.tier, c.mensal, c.economia])).toEqual([
+      ["start", 700, 100],
+      ["pro", 1200, 200],
+      ["scale", 2000, 400],
+    ])
+    expect(comboMensal("pro", p)).toBe(1200)
+    expect(comboFor("inexistente", p)).toBeUndefined()
+  })
+
+  it("combo: mensal + economia = soma dos avulsos do mesmo tier", () => {
+    const p = loadPricing(yaml)
+    for (const combo of p.combos) {
+      const margot = p.produtos.margot.tiers.find((t) => t.id === combo.tier)!
+      const motor = p.produtos.motor.tiers.find((t) => t.id === combo.tier)!
+      expect(combo.mensal + combo.economia).toBe(margot.mensal + motor.mensal)
+    }
   })
 })
