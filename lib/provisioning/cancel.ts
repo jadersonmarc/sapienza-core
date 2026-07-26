@@ -17,11 +17,14 @@ export async function cancelProviderSubscriptions(tenantId: string, produto?: Pr
   if (rows.length === 0) return
   const provider = paymentProvider()
   if (!provider.configured()) return
-  for (const r of rows) {
+  // Combo: margot e motor compartilham a MESMA recorrência (mesmo provider_sub_id) —
+  // deduplica para não cancelar a mesma assinatura duas vezes no Asaas.
+  const ids = [...new Set(rows.map((r) => r.provider_sub_id))]
+  for (const id of ids) {
     try {
-      await provider.cancelSubscription(r.provider_sub_id)
+      await provider.cancelSubscription(id)
     } catch (e) {
-      console.error("[cancel] falha ao cancelar assinatura no Asaas:", r.provider_sub_id, e)
+      console.error("[cancel] falha ao cancelar assinatura no Asaas:", id, e)
     }
   }
 }
@@ -30,6 +33,10 @@ export async function cancelProviderSubscriptions(tenantId: string, produto?: Pr
 // por contato). Marca `canceled`: o gating dos produtos passa a bloquear (canOperate
 // exige `active`) e o fechamento mensal ignora (só fecha `active`). A multa de
 // fidelidade, se houver, é combinada/cobrada à parte pelo superadmin — não aqui.
+//
+// ATENÇÃO combo: margot e motor de um combo compartilham UMA recorrência. Cancelar
+// só um produto derruba a cobrança do outro (mesmo provider_sub_id). Por ora, trate
+// combo como cancelamento de CONTA (cancelAllSubscriptions).
 
 export async function cancelSubscription(tenantId: string, produto: ProdutoId): Promise<boolean> {
   await cancelProviderSubscriptions(tenantId, produto)
