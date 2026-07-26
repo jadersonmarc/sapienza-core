@@ -42,7 +42,9 @@ maybe("checkoutSignup", () => {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     await raw`INSERT INTO public.plans (produto, tier, metric, mensal, incluso, canais, excedente_unitario, piso)
-              VALUES ('margot','pro','resposta',700,1500,NULL,0.50,400)`
+              VALUES ('margot','pro','resposta',700,1500,NULL,0.50,400),
+                     ('margot','start','resposta',400,500,NULL,0.50,400),
+                     ('motor','start','peca',400,12,1,25.0,400)`
     ;({ checkoutSignup } = await import("@/lib/signup/checkout"))
     ;({ setPaymentProvider } = await import("@/lib/payments/asaas"))
     ;({ applyPaymentReceived } = await import("@/lib/billing/reconcile"))
@@ -99,6 +101,42 @@ maybe("checkoutSignup", () => {
     const [inv1] = await raw<{ status: string }[]>`SELECT status FROM public.invoices WHERE id=${inv.id}::uuid`
     expect(sub1.status).toBe("active")
     expect(inv1.status).toBe("paid")
+  })
+
+  it("combo: cria margot+motor (past_due), 1 recorrência ao preço do combo, ativa junto ao pagar", async () => {
+    const { tenantId, invoiceId } = await checkoutSignup({
+      name: "Cliente Combo",
+      taxId: "12345678000199",
+      email: "combo@cliente.com",
+      password: "SenhaForte123",
+      produto: "combo",
+      tier: "start",
+      ...validCard,
+    })
+    expect(invoiceId).toBeTruthy()
+
+    // duas assinaturas (margot + motor), ambas past_due, MESMO provider_sub_id
+    const subs = await raw<{ produto: string; status: string; provider_sub_id: string }[]>`
+      SELECT produto, status, provider_sub_id FROM public.subscriptions
+       WHERE tenant_id=${tenantId}::uuid ORDER BY produto`
+    expect(subs.map((s) => s.produto)).toEqual(["margot", "motor"])
+    expect(subs.every((s) => s.status === "past_due")).toBe(true)
+    expect(subs[0].provider_sub_id).toMatch(/^sub_/)
+    expect(subs[0].provider_sub_id).toBe(subs[1].provider_sub_id)
+
+    // fatura de ativação ao PREÇO DO COMBO (700), não a soma dos avulsos (800)
+    const [inv] = await raw<{ id: string; total_brl: string; lines: unknown }[]>`
+      SELECT id, total_brl, lines FROM public.invoices WHERE tenant_id=${tenantId}::uuid`
+    expect(Number(inv.total_brl)).toBe(700)
+    const lines = inv.lines as { produto: string; subtotal: number }[]
+    expect(lines.map((l) => l.produto)).toEqual(["margot", "motor", "desconto_combo"])
+    expect(lines.reduce((s, l) => s + Number(l.subtotal), 0)).toBe(700)
+
+    // pagou → as DUAS assinaturas ativam
+    await applyPaymentReceived("sub_" + inv.id.slice(0, 6), inv.id)
+    const after = await raw<{ status: string }[]>`
+      SELECT status FROM public.subscriptions WHERE tenant_id=${tenantId}::uuid`
+    expect(after.every((s) => s.status === "active")).toBe(true)
   })
 
   it("recusa senha fraca e produto inválido, e e-mail já com conta ativa", async () => {

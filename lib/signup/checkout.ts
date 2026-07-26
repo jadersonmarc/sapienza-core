@@ -6,18 +6,24 @@ import { saveBillingIdentity } from "@/lib/tenant/billing"
 import { activateSubscription } from "@/lib/provisioning/activate"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
-import type { ProdutoId } from "@/lib/pricing/load"
+import { comboFor, type ProdutoId } from "@/lib/pricing/load"
 
 // Checkout self-service: o site coleta os dados e chama a API pública que roda
 // isto. Cria a conta na hora em `past_due` (bloqueada) e emite a cobrança da 1ª
 // mensalidade; o webhook de pagamento (reconcile) reativa para `active`.
+
+// "combo" = assinar margot + motor no MESMO tier, numa recorrência única a preço
+// reduzido (o desconto vive no `value` da recorrência do Asaas). Não é um produto do
+// enum: internamente vira DUAS subscriptions (margot + motor) que compartilham o
+// `provider_sub_id`, ativadas juntas quando a 1ª fatura é paga.
+export type CheckoutProduto = ProdutoId | "combo"
 
 export type CheckoutInput = {
   name: string
   taxId: string
   email: string
   password: string
-  produto: ProdutoId
+  produto: CheckoutProduto
   tier: string
   remoteIp: string
   // Cartão (transparente) + dados do titular exigidos pelo Asaas.
@@ -44,8 +50,12 @@ export async function checkoutSignup(
   input: CheckoutInput,
 ): Promise<{ tenantId: string; invoiceId: string }> {
   const email = input.email.trim().toLowerCase()
-  if (!PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
+  const isCombo = input.produto === "combo"
+  if (!isCombo && !PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
   if (!TIERS.has(input.tier)) throw new CheckoutError("plano inválido")
+  if (isCombo && !comboFor(input.tier)) throw new CheckoutError("combo indisponível para este plano")
+  // Produtos ativados por este cadastro: combo = os dois; avulso = só um.
+  const produtos: ProdutoId[] = isCombo ? ["margot", "motor"] : [input.produto as ProdutoId]
   const pwErr = validatePasswordStrength(input.password)
   if (pwErr) throw new CheckoutError(pwErr)
   const card = {
@@ -96,21 +106,45 @@ export async function checkoutSignup(
     // 2) identidade de cobrança → cria o cliente no Asaas (valida o CPF/CNPJ aqui).
     await saveBillingIdentity(tenantId, { legalName: input.name, taxId, billingEmail: email })
 
-    // 3) assinatura em past_due (bloqueada até pagar) + schema + eventos
-    await activateSubscription({ tenantId, produto: input.produto, tier: input.tier, status: "past_due" })
+    // 3) assinatura(s) em past_due (bloqueada até pagar) + schema + eventos.
+    // Combo ativa margot E motor no mesmo tier — o pagamento libera os dois.
+    for (const produto of produtos) {
+      await activateSubscription({ tenantId, produto, tier: input.tier, status: "past_due" })
+    }
 
-    // 4) valor da 1ª mensalidade (do plano materializado)
+    // 4) mensalidade de cada produto (do plano materializado)
     const planRows = (await db.execute(sql`
-      SELECT mensal FROM public.plans WHERE produto = ${input.produto} AND tier = ${input.tier}
-    `)) as unknown as { mensal: string }[]
-    if (planRows.length === 0) throw new CheckoutError("plano não encontrado")
-    const value = Number(planRows[0].mensal)
+      SELECT produto, mensal FROM public.plans
+       WHERE produto IN ${produtos} AND tier = ${input.tier}
+    `)) as unknown as { produto: string; mensal: string }[]
+    if (planRows.length !== produtos.length) throw new CheckoutError("plano não encontrado")
+    const mensalDe = new Map(planRows.map((r) => [r.produto, Number(r.mensal)]))
 
-    // 5) fatura de ativação (período atual, só a mensalidade)
+    // 5) valor cobrado + linhas da fatura de ativação (período atual).
+    // Combo: linhas dos dois produtos + uma linha de desconto → total = preço do combo.
     const period = currentPeriod()
-    const lines = [
-      { produto: input.produto, tier: input.tier, mensal: value, incluso: 0, count: 0, excedente: 0, subtotal: value },
-    ]
+    let value: number
+    let lines: {
+      produto: string; tier: string; mensal: number
+      incluso: number; count: number; excedente: number; subtotal: number
+    }[]
+    if (isCombo) {
+      const combo = comboFor(input.tier)!
+      value = combo.mensal
+      lines = produtos.map((produto) => {
+        const m = mensalDe.get(produto)!
+        return { produto, tier: input.tier, mensal: m, incluso: 0, count: 0, excedente: 0, subtotal: m }
+      })
+      lines.push({
+        produto: "desconto_combo", tier: input.tier, mensal: -combo.economia,
+        incluso: 0, count: 0, excedente: 0, subtotal: -combo.economia,
+      })
+    } else {
+      value = mensalDe.get(input.produto as ProdutoId)!
+      lines = [
+        { produto: input.produto, tier: input.tier, mensal: value, incluso: 0, count: 0, excedente: 0, subtotal: value },
+      ]
+    }
     const [invoice] = (await db.execute(sql`
       INSERT INTO public.invoices (tenant_id, period, status, lines, total_brl)
       VALUES (${tenantId}::uuid, ${period}, 'issued', ${JSON.stringify(lines)}::jsonb, ${value})
@@ -130,7 +164,7 @@ export async function checkoutSignup(
     const sub = await provider.createCardSubscription({
       customerId: tenant.asaas_customer_id,
       value,
-      description: `Sapienza — ${input.produto} ${input.tier}`,
+      description: isCombo ? `Sapienza — combo ${input.tier}` : `Sapienza — ${input.produto} ${input.tier}`,
       externalReference: invoice.id,
       nextDueDate: dueInDays(0),
       remoteIp: input.remoteIp,
@@ -139,9 +173,10 @@ export async function checkoutSignup(
     })
 
     // Guarda o id da assinatura no provedor (para cancelar a recorrência depois).
+    // Combo: a MESMA recorrência cobre margot + motor → grava o id nas duas linhas.
     await db.execute(sql`
       UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, updated_at = now()
-       WHERE tenant_id = ${tenantId}::uuid AND produto = ${input.produto}
+       WHERE tenant_id = ${tenantId}::uuid AND produto IN ${produtos}
     `)
     await db.execute(sql`
       UPDATE public.invoices SET provider_charge_id = ${sub.id}, due_date = ${dueInDays(3)}::date
