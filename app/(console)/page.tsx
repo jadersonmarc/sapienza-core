@@ -1,6 +1,8 @@
+import Link from "next/link"
 import { currentContext, subscribedProducts } from "@/lib/console/current"
-import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
+import { produtoLabel } from "@/lib/pricing/tier-label"
 import { Eyebrow } from "@/components/eyebrow"
+import { UsageCard } from "@/components/console/usage-card"
 
 // Home do console: só os produtos que o tenant ATIVO assina, com uso vs incluso.
 export default async function ConsoleHome() {
@@ -21,40 +23,20 @@ export default async function ConsoleHome() {
         </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {products.map((p) => {
-            const pct = p.incluso > 0 ? Math.min(100, Math.round((p.count / p.incluso) * 100)) : 0
-            const over = Math.max(0, p.count - p.incluso)
-            return (
-              <div key={p.produto} className="glass rounded-xl p-5">
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-lg font-semibold">{p.nome}</span>
-                  <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                    {tierLabel(p.tier)} · {p.status}
-                  </span>
-                </div>
-                <div className="mt-4 space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      {p.count} / {p.incluso} {p.metric}s
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">{pct}%</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={over > 0 ? "h-full bg-signal" : "h-full bg-primary"}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  {over > 0 && (
-                    <p className="text-xs text-signal">
-                      {over} excedente(s) × R$ {p.excedenteUnitario.toFixed(2)}
-                      {p.hardCap ? " · cap rígido" : ""}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )
-          })}
+          {products.map((p) => (
+            <UsageCard
+              key={p.produto}
+              p={p}
+              action={
+                <Link
+                  href="/minha-conta"
+                  className="text-xs font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Gerenciar plano →
+                </Link>
+              }
+            />
+          ))}
         </div>
       )}
     </div>

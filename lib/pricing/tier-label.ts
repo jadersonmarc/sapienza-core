@@ -23,3 +23,14 @@ const PRODUTO_LABELS: Record<string, string> = {
 export function produtoLabel(produto: string): string {
   return PRODUTO_LABELS[produto] ?? produto
 }
+
+// Rótulo pt-BR (plural) da métrica cobrável de cada produto — "peca" conta peças
+// PUBLICADAS; "resposta", mensagens da IA enviadas. Usado na UI de uso.
+const METRIC_LABELS: Record<string, string> = {
+  peca: "peças",
+  resposta: "respostas",
+}
+
+export function metricPlural(metric: string): string {
+  return METRIC_LABELS[metric] ?? `${metric}s`
+}
