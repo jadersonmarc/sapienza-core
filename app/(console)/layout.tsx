@@ -50,6 +50,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
           } as NavEntry,
         ]
       : []),
+    { href: "/minha-conta", label: "Minha conta" },
     { href: "/faturas", label: "Faturas" },
     { href: "/usuarios", label: "Usuários" },
     ...(user.isSuperadmin ? [{ href: "/super", label: "Admin" } as NavEntry] : []),

@@ -10,7 +10,16 @@ const label = "text-sm font-medium"
 
 // Dados de cobrança do tenant. Necessários para emitir Pix/boleto — sem eles, as
 // faturas são calculadas mas não geram cobrança.
-export function BillingForm({ identity }: { identity: BillingIdentity }) {
+export function BillingForm({
+  identity,
+  taxIdReadOnly = false,
+}: {
+  identity: BillingIdentity
+  // Em Minha Conta o CPF/CNPJ é somente-leitura (altera-se em Faturas). O input
+  // read-only ainda ENVIA o valor atual, então o saveBillingIdentity revalida o
+  // mesmo taxId sem quebrar.
+  taxIdReadOnly?: boolean
+}) {
   const [state, action, pending] = useActionState(saveBillingIdentityAction, initial)
   const pronto = Boolean(identity.asaasCustomerId)
 
@@ -34,7 +43,18 @@ export function BillingForm({ identity }: { identity: BillingIdentity }) {
             <label className={label} htmlFor="tax_id">
               CPF / CNPJ
             </label>
-            <input id="tax_id" name="tax_id" defaultValue={identity.taxId} className={field} required />
+            <input
+              id="tax_id"
+              name="tax_id"
+              defaultValue={identity.taxId}
+              className={taxIdReadOnly ? `${field} cursor-not-allowed text-muted-foreground` : field}
+              readOnly={taxIdReadOnly}
+              aria-readonly={taxIdReadOnly || undefined}
+              required
+            />
+            {taxIdReadOnly && (
+              <p className="text-xs text-muted-foreground">Para alterar o CPF/CNPJ, use a aba Faturas.</p>
+            )}
           </div>
           <div className="space-y-1">
             <label className={label} htmlFor="billing_email">
