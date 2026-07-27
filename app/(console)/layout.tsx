@@ -4,6 +4,7 @@ import { tenantSubscriptions } from "@/lib/tenant/context"
 import { Eyebrow } from "@/components/eyebrow"
 import { TenantSwitcher } from "@/components/console/tenant-switcher"
 import { ConsoleNav, type NavEntry } from "@/components/console/console-nav"
+import { ConsoleSidebar } from "@/components/console/console-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { produtoLabel } from "@/lib/pricing/tier-label"
 import { signOutAction } from "@/app/actions"
@@ -56,23 +57,17 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
-      <aside className="flex shrink-0 flex-col gap-4 border-b border-border bg-card/40 p-4 lg:w-60 lg:border-b-0 lg:border-r">
-        <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-4">
+      <ConsoleSidebar
+        brand={
           <Link href="/" className="font-display text-base font-semibold text-foreground">
             Sapienza <span className="font-mono text-xs text-muted-foreground">/console</span>
           </Link>
-          <div className="flex items-center gap-2 lg:hidden">
-            <ThemeToggle />
-            <form action={signOutAction}>
-              <button className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted">Sair</button>
-            </form>
-          </div>
-        </div>
-
+        }
+      >
         {active && <TenantSwitcher tenants={tenants} activeId={active.id} />}
         {active && <ConsoleNav entries={entries} />}
 
-        <div className="mt-auto hidden flex-col gap-3 lg:flex">
+        <div className="mt-auto flex flex-col gap-3">
           <p className="truncate font-mono text-[11px] text-muted-foreground">
             {user.email}
             {user.isSuperadmin ? <><br /><span className="uppercase tracking-wider">superadmin</span></> : null}
@@ -86,10 +81,10 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
             </form>
           </div>
         </div>
-      </aside>
+      </ConsoleSidebar>
 
       <div className="min-w-0 flex-1">
-        <main className="px-6 py-8">
+        <main className="px-4 py-6 sm:px-6 sm:py-8">
           {!active ? (
             <div className="space-y-3">
               <Eyebrow>Sem acesso</Eyebrow>
