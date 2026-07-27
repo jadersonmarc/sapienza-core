@@ -23,6 +23,11 @@ export class SeatError extends Error {
 
 const TIER_RANK: Record<Tier, number> = { start: 1, pro: 2, scale: 3 }
 
+/** Posição do tier na escada start<pro<scale (0 se desconhecido). */
+export function tierRank(tier: string): number {
+  return TIER_RANK[tier as Tier] ?? 0
+}
+
 /** Maior tier entre uma lista (por ranking start<pro<scale); default `start`. */
 export function highestOf(tiers: Tier[]): Tier {
   let best: Tier = "start"
