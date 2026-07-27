@@ -4,6 +4,7 @@ import { auth } from "@/auth"
 import { db, schema } from "@/lib/db"
 import { accessibleTenants, activeTenant, type TenantSummary } from "@/lib/tenant/context"
 import { loadPricing } from "@/lib/pricing/load"
+import { currentPeriod, renewal, type Renewal } from "@/lib/billing/period"
 
 export type CurrentContext = {
   user: { id: string; email: string; isSuperadmin: boolean }
@@ -44,12 +45,14 @@ export type ProductCard = {
   count: number
   excedenteUnitario: number
   hardCap: boolean
+  renewal: Renewal
 }
 
 /** Cards dos produtos ASSINADOS pelo tenant, com uso do mês corrente. */
 export async function subscribedProducts(tenantId: string): Promise<ProductCard[]> {
   const pricing = loadPricing()
-  const period = new Date().toISOString().slice(0, 7)
+  const period = currentPeriod()
+  const rnw = renewal()
 
   const subs = await db
     .select()
@@ -78,6 +81,7 @@ export async function subscribedProducts(tenantId: string): Promise<ProductCard[
       count: rows[0]?.count ?? 0,
       excedenteUnitario: def.excedente_unitario,
       hardCap: s.hardCap,
+      renewal: rnw,
     })
   }
   return cards

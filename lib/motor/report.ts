@@ -1,6 +1,7 @@
 import { desc, eq, sql } from "drizzle-orm"
 import { db, schema } from "@/lib/db"
 import { invoiceLine, monthIndex, overage } from "@/lib/billing/compute"
+import { currentPeriod } from "@/lib/billing/period"
 
 // Prévia do mês corrente para o Motor (não persiste — a fatura é emitida pelo
 // billing:close). Lê o `public` (do core) reusando a MESMA regra do fechamento:
@@ -31,10 +32,8 @@ type Row = {
   count: number | null
 }
 
-/** Período corrente (YYYY-MM). */
-export function currentPeriod(at = new Date()): string {
-  return at.toISOString().slice(0, 7)
-}
+// Período corrente (YYYY-MM em BRT) — fonte única em lib/billing/period.
+export { currentPeriod }
 
 export async function motorMonthlyBilling(
   tenantId: string,

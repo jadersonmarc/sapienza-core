@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { activateSubscription, schemaName } from "@/lib/provisioning/activate"
 import { closeTenantInvoice } from "@/lib/billing/close"
+import { currentPeriod } from "@/lib/billing/period"
 
 // Verificação e2e do control plane: provisioning (schema + eventos) e billing.
 // Uso: DATABASE_URL=... npx tsx scripts/verify-e2e.ts <tenantId>
@@ -9,7 +10,7 @@ import { closeTenantInvoice } from "@/lib/billing/close"
 async function main() {
   const tenantId = process.argv[2]
   if (!tenantId) throw new Error("passe o tenantId")
-  const period = new Date().toISOString().slice(0, 7)
+  const period = currentPeriod()
   let failures = 0
   const check = (name: string, ok: boolean, extra = "") => {
     console.log(`${ok ? "✓" : "✗"} ${name}${extra ? " — " + extra : ""}`)

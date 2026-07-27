@@ -7,6 +7,7 @@ import { activateSubscription } from "@/lib/provisioning/activate"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
 import { comboFor, type ProdutoId } from "@/lib/pricing/load"
+import { currentPeriod } from "@/lib/billing/period"
 
 // Checkout self-service: o site coleta os dados e chama a API pública que roda
 // isto. Cria a conta na hora em `past_due` (bloqueada) e emite a cobrança da 1ª
@@ -38,9 +39,6 @@ export class CheckoutError extends Error {}
 const TIERS = new Set(["start", "pro", "scale"])
 const PRODUTOS = new Set(["margot", "motor"])
 
-function currentPeriod(): string {
-  return new Date().toISOString().slice(0, 7)
-}
 function dueInDays(days: number): string {
   const d = new Date(Date.now() + days * 86400_000)
   return d.toISOString().slice(0, 10)
