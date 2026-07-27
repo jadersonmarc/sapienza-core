@@ -72,28 +72,30 @@ export default async function FaturasPage() {
                     )}
                   </div>
                 </div>
-                <table className="mt-3 w-full text-sm">
-                  <thead className="text-muted-foreground">
-                    <tr className="text-left">
-                      <th className="py-1 font-medium">Produto</th>
-                      <th className="py-1 font-medium">Tier</th>
-                      <th className="py-1 text-right font-medium">Uso/Incluso</th>
-                      <th className="py-1 text-right font-medium">Excedente</th>
-                      <th className="py-1 text-right font-medium">Subtotal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((l, i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="py-1">{l.produto}</td>
-                        <td className="py-1 font-mono text-xs">{tierLabel(l.tier)}</td>
-                        <td className="py-1 text-right">{l.count}/{l.incluso}</td>
-                        <td className="py-1 text-right">R$ {Number(l.excedente).toFixed(2)}</td>
-                        <td className="py-1 text-right">R$ {Number(l.subtotal).toFixed(2)}</td>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full min-w-[32rem] text-sm">
+                    <thead className="text-muted-foreground">
+                      <tr className="text-left">
+                        <th className="py-1 font-medium">Produto</th>
+                        <th className="py-1 font-medium">Tier</th>
+                        <th className="py-1 text-right font-medium">Uso/Incluso</th>
+                        <th className="py-1 text-right font-medium">Excedente</th>
+                        <th className="py-1 text-right font-medium">Subtotal</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {lines.map((l, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="py-1">{l.produto}</td>
+                          <td className="py-1 font-mono text-xs">{tierLabel(l.tier)}</td>
+                          <td className="py-1 text-right whitespace-nowrap">{l.count}/{l.incluso}</td>
+                          <td className="py-1 text-right whitespace-nowrap">R$ {Number(l.excedente).toFixed(2)}</td>
+                          <td className="py-1 text-right whitespace-nowrap">R$ {Number(l.subtotal).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )
           })}

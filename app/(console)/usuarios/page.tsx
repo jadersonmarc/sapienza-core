@@ -44,8 +44,8 @@ export default async function UsuariosPage() {
 
       {canManage && <AddMemberForm atCap={seats.atCap} tier={seats.tier} limit={seats.limit} />}
 
-      <div className="rounded-xl border border-border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full min-w-[34rem] text-sm">
           <thead className="text-muted-foreground">
             <tr className="text-left">
               <th className="px-4 py-2 font-medium">E-mail</th>
@@ -57,7 +57,7 @@ export default async function UsuariosPage() {
           <tbody>
             {members.map((m) => (
               <tr key={m.email} className="border-t border-border">
-                <td className="px-4 py-2">{m.email}</td>
+                <td className="px-4 py-2 whitespace-nowrap">{m.email}</td>
                 <td className="px-4 py-2 text-muted-foreground">{m.name ?? "—"}</td>
                 <td className="px-4 py-2 font-mono text-xs uppercase">
                   {m.role}

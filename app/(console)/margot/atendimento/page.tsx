@@ -37,8 +37,8 @@ export default async function AtendimentoPage() {
       ) : conversations.length === 0 ? (
         <p className="text-sm text-muted-foreground">Nenhuma conversa ainda.</p>
       ) : (
-        <div className="rounded-xl border border-border">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[30rem] text-sm">
             <thead className="text-muted-foreground">
               <tr className="text-left">
                 <th className="px-4 py-2 font-medium">Contato</th>
@@ -64,7 +64,7 @@ export default async function AtendimentoPage() {
                       {c.mode === "human" ? "humano" : "bot"}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">{when(c.last_message_at)}</td>
+                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">{when(c.last_message_at)}</td>
                 </tr>
               ))}
             </tbody>
