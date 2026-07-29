@@ -5,6 +5,7 @@ import { redirect } from "next/navigation"
 import {
   motorContext,
   createContent,
+  createMotion,
   createFromBrief,
   deleteContent,
   updateContent,
@@ -38,6 +39,21 @@ export async function createContentAction(_prev: ActionState, formData: FormData
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça" }
+  }
+  revalidatePath("/motor/conteudo")
+  redirect(`/motor/conteudo/${id}`)
+}
+
+export async function createMotionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const prompt = String(formData.get("prompt") ?? "").trim()
+  if (!prompt) return { error: "descreva o tema da peça em movimento" }
+  let id: string
+  try {
+    const ctx = await motorContext()
+    const created = await createMotion(ctx, prompt)
+    id = created.id
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao criar peça de motion" }
   }
   revalidatePath("/motor/conteudo")
   redirect(`/motor/conteudo/${id}`)

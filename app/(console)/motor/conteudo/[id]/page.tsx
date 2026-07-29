@@ -75,6 +75,8 @@ export default async function ContentDetailPage({
       .map((p) => p.proposed_from?.recommendation)
       .filter((r): r is string => Boolean(r))
     const isSocial = item.format === "linkedin" || item.format === "instagram"
+    // Peça de motion aguardando render (fila/renderizando) → auto-refresh até ficar pronta.
+    const motionPending = item.is_motion && item.render_status !== "done" && item.render_status !== "error"
     return (
       <div className="space-y-6">
         <div className="space-y-2">
@@ -116,12 +118,9 @@ export default async function ContentDetailPage({
         )}
 
         {item.generating && (
-          <>
-            <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
-              Gerando rascunho com IA… pode levar até ~1min. Esta página atualiza sozinha quando ficar pronto.
-            </p>
-            <AutoRefresh />
-          </>
+          <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+            Gerando rascunho com IA… pode levar até ~1min. Esta página atualiza sozinha quando ficar pronto.
+          </p>
         )}
 
         {item.generate_error && !item.generating && (
@@ -129,6 +128,40 @@ export default async function ContentDetailPage({
             Falha ao gerar o rascunho: {item.generate_error}. Use “Regenerar rascunho” para tentar de novo.
           </p>
         )}
+
+        {/* Peça de motion: vídeo renderizado + estado do render. */}
+        {item.is_motion && (
+          <div className="max-w-3xl space-y-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <h2 className="text-sm font-medium text-muted-foreground">Peça em movimento (vídeo)</h2>
+              {item.motion_preset && (
+                <span className="rounded bg-muted px-2 py-0.5 text-xs">
+                  {item.motion_preset} · {item.motion_aspect}
+                </span>
+              )}
+            </div>
+            {item.render_status === "done" && item.video_url ? (
+              <video
+                src={item.video_url}
+                controls
+                loop
+                playsInline
+                className="w-full max-w-xs rounded-xl border border-border"
+              />
+            ) : item.render_status === "error" ? (
+              <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                Falha ao renderizar o vídeo: {item.render_error ?? "erro desconhecido"}.
+              </p>
+            ) : (
+              <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+                {item.generating ? "Gerando o conteúdo…" : "Renderizando o vídeo…"} A página atualiza sozinha quando ficar
+                pronto.
+              </p>
+            )}
+          </div>
+        )}
+
+        {(item.generating || motionPending) && <AutoRefresh />}
 
         {/* Editor coeso, mostrado direto — o campo de texto É a peça (sem cópia
             só-leitura duplicada nem toggle escondendo a edição). */}

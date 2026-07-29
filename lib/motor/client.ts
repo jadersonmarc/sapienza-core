@@ -184,6 +184,17 @@ export async function createContent(
   )
 }
 
+/** Cria uma peça de MOTION (vídeo). Capability-gated no Motor (403 se o plano não
+ *  tem motion). Roda geração + render em segundo plano; volta 202 { id, slug }. */
+export async function createMotion(ctx: MotorCtx, prompt: string): Promise<{ id: string; slug: string }> {
+  return call<{ id: string; slug: string }>(
+    ctx,
+    "/api/v1/content/motion",
+    { method: "POST", body: JSON.stringify({ prompt }) },
+    { timeoutMs: AI_TIMEOUT_MS },
+  )
+}
+
 export type BriefInput = {
   objetivo: string
   pontosChave?: string

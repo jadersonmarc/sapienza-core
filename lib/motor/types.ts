@@ -22,6 +22,14 @@ export type ContentItem = {
   // generate_error guarda a falha da última tentativa (null = ok).
   generating: boolean
   generate_error: string | null
+  // Motion (peça em movimento / vídeo). is_motion marca a peça; render_* é o estado
+  // do serviço de render; video_url é o MP4 pronto (R2).
+  is_motion: boolean
+  motion_preset: string | null
+  motion_aspect: string | null
+  video_url: string | null
+  render_status: string | null
+  render_error: string | null
   title?: string | null
 }
 

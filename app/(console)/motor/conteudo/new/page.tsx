@@ -2,12 +2,19 @@ import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { Button } from "@/components/ui/button"
 import { motorContext, getChannels } from "@/lib/motor/client"
+import { tenantSubscriptions } from "@/lib/tenant/context"
 import type { ContentFormat } from "@/lib/motor/types"
 import { NewContentForm } from "../new-form"
 import { BriefForm } from "../brief-form"
+import { MotionForm } from "../motion-form"
 
 export default async function NewContentPage() {
   const ctx = await motorContext()
+  // Motion é diferencial de Pro/Premium (=scale) — mostra o form só p/ esses tiers.
+  const subs = await tenantSubscriptions(ctx.tenantId).catch(() => [])
+  const motionEnabled = subs.some(
+    (s) => s.produto === "motor" && s.status === "active" && (s.tier === "pro" || s.tier === "scale"),
+  )
   // Só ofereço criar peça para canais CONECTADOS. blog cobre blog/wordpress/webhook.
   const ch = await getChannels(ctx).catch(() => null)
   const connected = new Set((ch?.channels ?? []).filter((c) => c.enabled).map((c) => c.platform))
@@ -47,6 +54,8 @@ export default async function NewContentPage() {
           {formats.includes("blog") && <BriefForm />}
         </>
       )}
+
+      {motionEnabled && <MotionForm />}
 
       <Button asChild variant="outline">
         <Link href="/motor/conteudo">Voltar</Link>
