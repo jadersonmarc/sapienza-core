@@ -37,6 +37,12 @@ export class MotorError extends Error {
 
 export type MotorCtx = { tenantId: string; userId: string; role: string }
 
+// Timeout curto p/ CRUD; timeout longo p/ chamadas que rodam o Claude
+// (análise, geração de rascunho, aplicar recomendação) — opus-4-8 com adaptive
+// thinking passa de 25s com facilidade.
+const DEFAULT_TIMEOUT_MS = 25_000
+const AI_TIMEOUT_MS = 120_000
+
 function baseUrl(): string {
   return (process.env.MOTOR_API_URL ?? "http://localhost:3100").replace(/\/$/, "")
 }
@@ -52,7 +58,12 @@ export async function motorContext(): Promise<MotorCtx> {
   return { tenantId: active.id, userId: user.id, role }
 }
 
-async function call<T>(ctx: MotorCtx, path: string, init?: RequestInit): Promise<T> {
+async function call<T>(
+  ctx: MotorCtx,
+  path: string,
+  init?: RequestInit,
+  opts?: { timeoutMs?: number },
+): Promise<T> {
   const token = await issueProductToken({
     userId: ctx.userId,
     tenantId: ctx.tenantId,
@@ -71,7 +82,7 @@ async function call<T>(ctx: MotorCtx, path: string, init?: RequestInit): Promise
         ...init?.headers,
       },
       cache: "no-store",
-      signal: init?.signal ?? AbortSignal.timeout(25000),
+      signal: init?.signal ?? AbortSignal.timeout(opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     })
   } catch (e) {
     const timedOut = e instanceof DOMException && e.name === "TimeoutError"
@@ -139,10 +150,12 @@ export async function applyRecommendation(
   id: string,
   body: { type?: string; recommendation: string },
 ): Promise<{ proposal_id: string }> {
-  return call<{ proposal_id: string }>(ctx, `/api/v1/content/${id}/apply-recommendation`, {
-    method: "POST",
-    body: JSON.stringify(body),
-  })
+  return call<{ proposal_id: string }>(
+    ctx,
+    `/api/v1/content/${id}/apply-recommendation`,
+    { method: "POST", body: JSON.stringify(body) },
+    { timeoutMs: AI_TIMEOUT_MS },
+  )
 }
 
 export async function listProposals(ctx: MotorCtx, id: string): Promise<Proposal[]> {
@@ -163,10 +176,12 @@ export async function createContent(
   prompt: string,
   format: ContentFormat = "blog",
 ): Promise<{ id: string; slug: string }> {
-  return call<{ id: string; slug: string }>(ctx, "/api/v1/content", {
-    method: "POST",
-    body: JSON.stringify({ prompt, format }),
-  })
+  return call<{ id: string; slug: string }>(
+    ctx,
+    "/api/v1/content",
+    { method: "POST", body: JSON.stringify({ prompt, format }) },
+    { timeoutMs: AI_TIMEOUT_MS },
+  )
 }
 
 export type BriefInput = {
@@ -178,10 +193,12 @@ export type BriefInput = {
 }
 
 export async function createFromBrief(ctx: MotorCtx, input: BriefInput): Promise<{ id: string; slug: string }> {
-  return call<{ id: string; slug: string }>(ctx, "/api/v1/content/brief", {
-    method: "POST",
-    body: JSON.stringify(input),
-  })
+  return call<{ id: string; slug: string }>(
+    ctx,
+    "/api/v1/content/brief",
+    { method: "POST", body: JSON.stringify(input) },
+    { timeoutMs: AI_TIMEOUT_MS },
+  )
 }
 
 export async function transitionContent(
@@ -300,6 +317,7 @@ export async function runAnalysis(ctx: MotorCtx, id: string, type: AnalysisType)
     ctx,
     `/api/v1/content/${id}/analyze`,
     { method: "POST", body: JSON.stringify({ type }) },
+    { timeoutMs: AI_TIMEOUT_MS },
   )
 }
 
