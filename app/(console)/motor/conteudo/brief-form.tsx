@@ -46,6 +46,7 @@ export function BriefForm() {
           >
             {pending ? "Gerando…" : "Gerar do brief"}
           </button>
+          {pending && <span className="text-sm text-muted-foreground">gerando com IA — pode levar até ~1min</span>}
           {state.error && <span className="text-sm text-destructive">{state.error}</span>}
         </div>
       </form>
