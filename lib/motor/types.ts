@@ -18,6 +18,10 @@ export type ContentItem = {
   regen_count: number
   image_url: string | null
   publish_error: string | null
+  // Geração de rascunho em segundo plano: generating=true enquanto a IA escreve;
+  // generate_error guarda a falha da última tentativa (null = ok).
+  generating: boolean
+  generate_error: string | null
   title?: string | null
 }
 

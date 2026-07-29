@@ -217,11 +217,15 @@ export async function regenerateContent(
   ctx: MotorCtx,
   id: string,
   prompt?: string,
-): Promise<{ revisionId: string }> {
-  return call<{ revisionId: string }>(ctx, `/api/v1/content/${id}/regenerate`, {
-    method: "POST",
-    body: JSON.stringify({ prompt }),
-  })
+): Promise<{ async?: boolean; revisionId?: string }> {
+  // Regeneração roda em segundo plano no Motor (202 { async: true }); o resultado
+  // aparece na peça depois (generating → nova revisão, ou generate_error).
+  return call<{ async?: boolean; revisionId?: string }>(
+    ctx,
+    `/api/v1/content/${id}/regenerate`,
+    { method: "POST", body: JSON.stringify({ prompt }) },
+    { timeoutMs: AI_TIMEOUT_MS },
+  )
 }
 
 export async function publishContent(

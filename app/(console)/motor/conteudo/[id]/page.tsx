@@ -9,6 +9,7 @@ import { ContentEditor } from "./content-editor"
 import { ProposalsPanel } from "./proposals-panel"
 import { PieceImage } from "./piece-image"
 import { AnalyzePanel } from "./analyze-panel"
+import { AutoRefresh } from "./auto-refresh"
 
 const STATUS_LABEL: Record<ContentStatus, string> = {
   draft: "rascunho",
@@ -114,6 +115,21 @@ export default async function ContentDetailPage({
           </p>
         )}
 
+        {item.generating && (
+          <>
+            <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+              Gerando rascunho com IA… pode levar até ~1min. Esta página atualiza sozinha quando ficar pronto.
+            </p>
+            <AutoRefresh />
+          </>
+        )}
+
+        {item.generate_error && !item.generating && (
+          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            Falha ao gerar o rascunho: {item.generate_error}. Use “Regenerar rascunho” para tentar de novo.
+          </p>
+        )}
+
         {/* Editor coeso, mostrado direto — o campo de texto É a peça (sem cópia
             só-leitura duplicada nem toggle escondendo a edição). */}
         <div className="max-w-3xl space-y-3">
@@ -128,6 +144,8 @@ export default async function ContentDetailPage({
               excerpt={item.revision.excerpt ?? ""}
               isSocial={isSocial}
             />
+          ) : item.generating ? (
+            <p className="text-sm text-muted-foreground">A IA está escrevendo a primeira versão…</p>
           ) : (
             <p className="text-sm text-muted-foreground">
               Sem revisão ainda. Use “Regenerar rascunho” acima para a IA escrever a primeira versão.

@@ -65,12 +65,18 @@ export default async function ConteudoPage() {
               className="flex items-center justify-between gap-4 p-4 hover:bg-muted/50"
             >
               <div className="min-w-0">
-                <div className="truncate font-medium">{it.title || it.slug}</div>
+                <div className="truncate font-medium">
+                  {it.generating ? "Gerando rascunho…" : it.title || it.slug}
+                </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">
                     {FORMAT_LABEL[it.format] ?? it.format}
                   </span>
-                  <span className="rounded bg-muted px-2 py-0.5">{STATUS_LABEL[it.status]}</span>
+                  {it.generating ? (
+                    <span className="rounded bg-primary/15 px-2 py-0.5 text-primary">gerando…</span>
+                  ) : (
+                    <span className="rounded bg-muted px-2 py-0.5">{STATUS_LABEL[it.status]}</span>
+                  )}
                   {it.published_at && (
                     <span>
                       publicada em{" "}
