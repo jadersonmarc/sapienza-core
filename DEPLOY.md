@@ -235,6 +235,38 @@ SELECT metric, count FROM usage_counters
 > dele. Se incomodar, reduza a frequência em `sapienza-motor/.github/workflows/cron-generate-draft.yml`
 > (ex.: `0 11 * * 1` = só segunda, ~4/mês). É mudança de cron, não de código.
 
+## 5b. motion — serviço de render (Remotion, vídeo)
+
+O 4º app do Coolify: renderiza as peças de motion (vídeo) fora do web app. Vive em
+`sapienza-motor/motion/` (mesmo repo, importa os tokens/fontes do motor).
+
+**Application → GitHub → `sapienza-motor`**, `master`, **Build Pack: Dockerfile**, com
+**Dockerfile Location = `motion/Dockerfile`** e **Base Directory = `/`** (o build precisa da
+raiz do repo — o `motion/` importa `../lib` e `../assets`). Porta **3200**, Health Check
+**`/health`**. **Recurso: ≥ 2 GB de RAM** (4 GB recomendado; é Chromium headless + ffmpeg).
+
+Envs (a maioria igual ao motor):
+
+| env | valor |
+|-----|-------|
+| `DATABASE_URL` | o MESMO do core/motor (rede interna do Coolify) |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` / `MOTOR_PUBLIC_URL` | os MESMOS do motor (upload do MP4 no R2) |
+| `WEBHOOK_SECRET` | o MESMO do core/motor (protege o `/trigger`) |
+| `PORT` | `3200` |
+| `MOTION_RENDER_CONCURRENCY` | `1` (opcional) |
+| `MOTION_RENDER_TIMEOUT_MS` | `120000` (opcional) |
+| `REMOTION_LICENSE_KEY` | opcional; default `free-license` |
+
+**Não precisa** `PRODUCT_JWT_SECRET` nem `MOTOR_ENC_KEY` (não emite JWT nem lê credencial de
+canal — a publicação acontece no web app do motor). Depois de setar o domínio público, guarde a
+URL para o secret `MOTION_URL` do GitHub Actions (ver §7).
+
+> **Passo obrigatório após o deploy do core:** rodar **`pnpm pricing:sync`** no core (contra o
+> Postgres de produção) para materializar `motion_enabled`/`motion_weight` em `public.product_rules`.
+> **Sem isso, `motionEnabled` é false para todos** e ninguém consegue criar peça de motion. A
+> migration de tenant `0009_motion` é aplicada automaticamente no boot do motor (`pnpm provision`).
+> A publicação Fase 1 é só pelo **canal Webhook** — o tenant precisa ter o Webhook conectado.
+
 ## 6. Primeiro cliente
 
 Criar tenant e ativar assinatura ainda **não têm UI** — são scripts, rodados no terminal do
@@ -279,10 +311,10 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 | Repo | Secrets | Jobs |
 |---|---|---|
 | `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC) |
-| `sapienza-motor` | `MOTOR_URL`, `WEBHOOK_SECRET` | `publish-scheduled` (10min), `close-approval-window` (15min), `provision` (1h), `generate-draft` (seg/qua/sex) |
+| `sapienza-motor` | `MOTOR_URL`, `MOTION_URL`, `WEBHOOK_SECRET` | `publish-scheduled` (10min), `close-approval-window` (15min), `provision` (1h), `generate-draft` (seg/qua/sex), `render-motion` (5min) |
 
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
-sem barra no fim.
+`MOTION_URL` = URL pública do serviço de render (§5b), sem barra no fim.
 
 **Teste o de billing agora, não no dia 1.** É o que gera receita e o que mais silenciosamente
 falha:
