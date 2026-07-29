@@ -2,7 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getContent, listAnalyses, listProposals, MotorError } from "@/lib/motor/client"
-import type { Analysis, ContentFormat, ContentStatus, Proposal } from "@/lib/motor/types"
+import type { Analysis, AnalysisType, ContentFormat, ContentStatus, Proposal } from "@/lib/motor/types"
 import { ItemActions } from "./item-actions"
 import { DeleteButton } from "./delete-button"
 import { ContentEditor } from "./content-editor"
@@ -24,6 +24,15 @@ const FORMAT_LABEL: Record<ContentFormat, string> = {
   instagram: "Instagram",
 }
 
+// Fallback estático dos tipos de análise (mesmos labels do Motor) — usado quando o
+// GET /analyze falha, p/ os botões continuarem aparecendo mesmo sem histórico.
+const ANALYZER_TYPES: { type: AnalysisType; label: string }[] = [
+  { type: "quality", label: "Qualidade" },
+  { type: "seo", label: "SEO" },
+  { type: "emotional", label: "Impacto emocional" },
+  { type: "thematic", label: "Temática" },
+]
+
 // Limite de regenerações do plano (product_rules.max_regeneracoes_por_peca). Usado só
 // como dica de UI — o Motor é a fonte de verdade e retorna 409 na 3ª tentativa.
 const REGEN_LIMIT = 2
@@ -44,10 +53,26 @@ export default async function ContentDetailPage({
   try {
     const item = await getContent(ctx, id)
     // Análises/propostas degradam sem derrubar a página (o essencial é a peça).
-    const [analyses, proposals] = await Promise.all([
-      listAnalyses(ctx, id).catch(() => ({ analyses: [] as Analysis[], types: [] })),
+    // Preservamos a mensagem de erro do GET /analyze p/ o painel avisar em vez de
+    // sumir silenciosamente com os botões.
+    const [analysesRes, proposals] = await Promise.all([
+      listAnalyses(ctx, id)
+        .then((r) => ({ ok: true as const, r }))
+        .catch((e) => ({ ok: false as const, e })),
       listProposals(ctx, id).catch((): Proposal[] => []),
     ])
+    const analyses: Analysis[] = analysesRes.ok ? analysesRes.r.analyses : []
+    const analysisTypes =
+      analysesRes.ok && analysesRes.r.types.length ? analysesRes.r.types : ANALYZER_TYPES
+    const analysesError = analysesRes.ok
+      ? null
+      : analysesRes.e instanceof MotorError
+        ? `${analysesRes.e.status} — ${analysesRes.e.message}`
+        : "serviço indisponível"
+    // Recomendações já aplicadas (têm proposta) — o painel de análise as remove da lista.
+    const appliedRecommendations = proposals
+      .map((p) => p.proposed_from?.recommendation)
+      .filter((r): r is string => Boolean(r))
     const isSocial = item.format === "linkedin" || item.format === "instagram"
     return (
       <div className="space-y-6">
@@ -112,9 +137,21 @@ export default async function ContentDetailPage({
           <PieceImage id={item.id} format={item.format} imageUrl={item.image_url} />
         </div>
 
-        <ProposalsPanel id={item.id} currentBody={item.revision?.body_markdown ?? ""} proposals={proposals} />
+        <ProposalsPanel
+          id={item.id}
+          status={item.status}
+          currentBody={item.revision?.body_markdown ?? ""}
+          proposals={proposals}
+        />
 
-        <AnalyzePanel id={item.id} analyses={analyses.analyses} types={analyses.types} />
+        <AnalyzePanel
+          id={item.id}
+          status={item.status}
+          analyses={analyses}
+          types={analysisTypes}
+          appliedRecommendations={appliedRecommendations}
+          loadError={analysesError}
+        />
       </div>
     )
   } catch (e) {

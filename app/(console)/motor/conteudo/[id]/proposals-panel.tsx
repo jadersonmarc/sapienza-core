@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { applyRecommendationAction, acceptProposalAction, discardProposalAction } from "../../actions"
 import { lineDiff, diffStats } from "@/lib/content/diff"
-import type { Proposal } from "@/lib/motor/types"
+import type { ContentStatus, Proposal } from "@/lib/motor/types"
 
 function Diff({ oldText, newText }: { oldText: string; newText: string }) {
   const lines = lineDiff(oldText, newText)
@@ -42,13 +42,16 @@ function Diff({ oldText, newText }: { oldText: string; newText: string }) {
 // descartar remove. Espelha o fluxo de propostas do admin do spa.
 export function ProposalsPanel({
   id,
+  status,
   currentBody,
   proposals,
 }: {
   id: string
+  status: ContentStatus
   currentBody: string
   proposals: Proposal[]
 }) {
+  const isLocked = status === "published" || status === "archived"
   const [rec, setRec] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
@@ -80,6 +83,13 @@ export function ProposalsPanel({
     <div className="space-y-4">
       <h2 className="text-sm font-medium text-muted-foreground">Melhorias com IA</h2>
 
+      {isLocked && (
+        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          Esta peça já foi publicada — as melhorias servem só como referência (não há como aplicá-las na
+          versão que já foi ao ar).
+        </p>
+      )}
+
       <div className="space-y-2 rounded-xl border border-dashed border-border p-4">
         <textarea
           value={rec}
@@ -96,6 +106,7 @@ export function ProposalsPanel({
           >
             {pending ? "Gerando…" : "Gerar proposta com IA"}
           </button>
+          {pending && <span className="text-sm text-muted-foreground">pode levar até ~1min</span>}
           {error && <span className="text-sm text-destructive">{error}</span>}
         </div>
       </div>
