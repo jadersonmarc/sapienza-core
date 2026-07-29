@@ -37,6 +37,8 @@ produtos:
       max_regeneracoes_por_peca: 2       # 3ª = pedido customizado (excedente)
       revisao_manual_sapienza: false
       storage_mb: { start: 500, pro: 2000, scale: 5000 }  # cota da biblioteca de mídia por tier
+      motion_enabled: { start: 0, pro: 1, scale: 1 }      # peça em movimento (vídeo): Pro e Premium (=scale)
+      motion_weight: 1                                     # peso da peça de motion na cota de peça publicada (lançamento = 1)
 # Combos por tier: assinar Margot + Motor no MESMO tier, numa recorrência única a
 # preço reduzido. `mensal` = preço do combo; `economia` = desconto vs. soma dos avulsos
 # (mensal + economia DEVE bater com margot[tier].mensal + motor[tier].mensal).
