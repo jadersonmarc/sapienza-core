@@ -23,6 +23,13 @@ export function MotionForm() {
         placeholder="Tema da peça (ex.: convite para o webinar de automação)…"
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
       />
+      <label className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Canal:</span>
+        <select name="channel" defaultValue="instagram" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+          <option value="instagram">Instagram</option>
+          <option value="linkedin">LinkedIn</option>
+        </select>
+      </label>
       <div className="flex items-center gap-3">
         <button
           type="submit"

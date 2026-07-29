@@ -47,10 +47,11 @@ export async function createContentAction(_prev: ActionState, formData: FormData
 export async function createMotionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const prompt = String(formData.get("prompt") ?? "").trim()
   if (!prompt) return { error: "descreva o tema da peça em movimento" }
+  const channel = String(formData.get("channel") ?? "instagram") === "linkedin" ? "linkedin" : "instagram"
   let id: string
   try {
     const ctx = await motorContext()
-    const created = await createMotion(ctx, prompt)
+    const created = await createMotion(ctx, prompt, channel)
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça de motion" }
@@ -264,6 +265,7 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       model: model || null,
       enabled: formData.get("enabled") === "on",
       cadence_days: Number.isFinite(cadence) ? cadence : 7,
+      handle: String(formData.get("handle") ?? "").trim(),
     })
     revalidatePath("/motor/agente")
     revalidatePath("/motor")

@@ -110,6 +110,7 @@ export type EditorConfig = {
   model: string | null
   enabled: boolean
   cadence_days: number
+  handle: string // @marca no rodapé das peças de motion (vazio = default)
 }
 
 export type SetupStatus = {

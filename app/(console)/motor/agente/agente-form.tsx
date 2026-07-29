@@ -70,6 +70,16 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
       </div>
 
       <div className="space-y-1">
+        <label className={label} htmlFor="handle">
+          Handle da marca (peças de motion)
+        </label>
+        <input id="handle" name="handle" defaultValue={cfg.handle} placeholder="Ex.: @suamarca" className={field} />
+        <p className="text-xs text-muted-foreground">
+          Aparece no rodapé dos vídeos (peças em movimento). Vazio = @sapienzalabs.
+        </p>
+      </div>
+
+      <div className="space-y-1">
         <label className={label} htmlFor="themes">
           Temas / áreas a priorizar
         </label>
