@@ -21,5 +21,11 @@ ENV NODE_ENV=production
 COPY --from=build /app ./
 EXPOSE 3000
 
+# Health check via Node (imagem slim não tem curl/wget). GET /health → 200 "ok"
+# (fora do matcher do middleware). start-period folgado: migrate + pricing:sync
+# rodam antes do next start.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
 # migrate + pricing:sync são idempotentes; rodam a cada boot antes do start.
 CMD ["sh", "-lc", "pnpm db:migrate && pnpm pricing:sync && pnpm start"]
