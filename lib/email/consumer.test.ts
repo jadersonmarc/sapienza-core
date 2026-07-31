@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest"
 import postgres from "postgres"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 
 // Testa o consumer `mailer`: drena o event_outbox, envia 1 e-mail por evento que
@@ -24,7 +24,7 @@ maybe("consumer de e-mail (mailer)", () => {
     raw = postgres(dsn!, { prepare: false, max: 1 })
     await raw.unsafe(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;
                       DROP SCHEMA IF EXISTS bus CASCADE;`)
-    for (const f of ["0000_control_plane.sql", "0005_email_deliveries.sql"]) {
+    for (const f of readdirSync(join(process.cwd(), "drizzle")).filter((f) => f.endsWith(".sql")).sort()) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     ;({ db } = await import("@/lib/db"))

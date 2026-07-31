@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import postgres from "postgres"
 import bcrypt from "bcryptjs"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import type { PaymentProvider, Charge } from "@/lib/payments/asaas"
 
@@ -38,7 +38,7 @@ maybe("checkoutSignup", () => {
     raw = postgres(dsn!, { prepare: false, max: 1 })
     await raw.unsafe(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;
                       DROP SCHEMA IF EXISTS bus CASCADE;`)
-    for (const f of ["0000_control_plane.sql", "0001_product_rules_usage_agg.sql", "0002_billing_identity.sql", "0003_invoice_payment.sql", "0004_subscription_provider_id.sql"]) {
+    for (const f of readdirSync(join(process.cwd(), "drizzle")).filter((f) => f.endsWith(".sql")).sort()) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     await raw`INSERT INTO public.plans (produto, tier, metric, mensal, incluso, canais, excedente_unitario, piso)

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import postgres from "postgres"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 import type { PaymentProvider, Charge } from "@/lib/payments/asaas"
 
@@ -40,13 +40,7 @@ maybe("closeTenantInvoice", () => {
     raw = postgres(dsn!, { prepare: false, max: 1 })
     await raw.unsafe(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;
                       DROP SCHEMA IF EXISTS bus CASCADE;`)
-    for (const f of [
-      "0000_control_plane.sql",
-      "0001_product_rules_usage_agg.sql",
-      "0002_billing_identity.sql",
-      "0003_invoice_payment.sql",
-      "0004_subscription_provider_id.sql",
-    ]) {
+    for (const f of readdirSync(join(process.cwd(), "drizzle")).filter((f) => f.endsWith(".sql")).sort()) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     // pricing.sync mínimo: um plano margot/pro (a close junta por produto+tier).
@@ -113,7 +107,7 @@ maybe("closeTenantInvoice", () => {
   })
 
   // Reconciliação do webhook: vencido bloqueia, pago destrava.
-  it("webhook: overdue → fatura overdue + assinatura past_due; received → paga + reativa", async () => {
+  it("webhook: overdue → fatura overdue (grace, NÃO bloqueia); received → paga + reativa", async () => {
     const { applyPaymentReceived, applyPaymentOverdue } = await import("@/lib/billing/reconcile")
     const [t] = await raw<{ id: string }[]>`
       INSERT INTO public.tenants (name, slug, asaas_customer_id) VALUES ('Recon','recon','cus_r') RETURNING id`
@@ -124,12 +118,16 @@ maybe("closeTenantInvoice", () => {
       INSERT INTO public.invoices (tenant_id, period, status, lines, total_brl, provider_charge_id)
       VALUES (${t.id}::uuid,'2026-06','issued','[]'::jsonb, 700, 'pay_r') RETURNING id`
 
-    // vencido → overdue + past_due (bloqueia o produto)
+    // vencido → fatura overdue, mas a assinatura SEGUE ativa (grace de 3 dias;
+    // quem bloqueia é o cron de dunning, não o webhook).
     expect(await applyPaymentOverdue("pay_r", inv.id)).toBe(true)
     let sub = (await raw<{ status: string }[]>`SELECT status FROM public.subscriptions WHERE tenant_id=${t.id}::uuid`)[0]
     let iv = (await raw<{ status: string }[]>`SELECT status FROM public.invoices WHERE id=${inv.id}::uuid`)[0]
-    expect(sub.status).toBe("past_due")
+    expect(sub.status).toBe("active")
     expect(iv.status).toBe("overdue")
+
+    // dunning bloqueou no dia 3 (simulado) → past_due
+    await raw`UPDATE public.subscriptions SET status='past_due' WHERE tenant_id=${t.id}::uuid`
 
     // pago → paid + reativa (destrava)
     expect(await applyPaymentReceived("pay_r", inv.id)).toBe(true)
