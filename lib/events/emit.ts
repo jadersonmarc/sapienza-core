@@ -23,6 +23,8 @@ export type EventType =
  * Use dentro de `db.transaction(async (tx) => { ...; await emitEvent(tx, ...) })`.
  */
 export async function emitEvent(
+  // Só usamos `.execute`; os generics concretos do PgTransaction são irrelevantes aqui.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   tx: { execute: PgTransaction<any, any, any>["execute"] },
   args: { type: EventType; tenantId: string; produto?: string; payload: Record<string, unknown> },
 ): Promise<void> {

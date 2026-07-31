@@ -9,7 +9,7 @@ export default async function AgentePage() {
   const ctx = await motorContext()
 
   let cfg
-  let formats: ContentFormat[] = []
+  const formats: ContentFormat[] = []
   let unavailable: string | null = null
   try {
     cfg = await getEditorConfig(ctx)
