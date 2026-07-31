@@ -11,7 +11,6 @@ export const config = {
   // `health` fica de fora para responder 200 ao health check do Coolify em vez de
   // redirecionar para /login. Dentro do matcher, o callback authorized() faria 307.
   // `api/webhooks` (pagamento) também: sem sessão, se protege pelo token do provedor.
-  // `api/public` (checkout do site): server-to-server, protegido pelo CHECKOUT_SECRET.
   // `assinar` (cadastro + pagamento self-service) é público: o lead ainda não tem conta.
-  matcher: ["/((?!api/auth|api/cron|api/webhooks|api/public|health|_next/static|_next/image|favicon.ico|login|assinar|logo-sapienza.png).*)"],
+  matcher: ["/((?!api/auth|api/cron|api/webhooks|health|_next/static|_next/image|favicon.ico|login|assinar|logo-sapienza.png).*)"],
 }

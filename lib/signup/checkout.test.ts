@@ -177,17 +177,6 @@ maybe("checkoutSignup", () => {
     setPaymentProvider(new FakeProvider()) // restaura p/ os próximos testes
   })
 
-  it("a rota pública exige x-checkout-secret (401 sem)", async () => {
-    process.env.CHECKOUT_SECRET = "sitesecret"
-    const { POST } = await import("@/app/api/public/checkout/route")
-    const req = new Request("http://x/api/public/checkout", {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-checkout-secret": "errado" },
-      body: JSON.stringify({ email: "z@z.com" }),
-    })
-    expect((await POST(req)).status).toBe(401)
-  })
-
   it("o fechamento mensal NÃO sobrescreve a fatura de ativação já paga", async () => {
     const { closeTenantInvoice } = await import("@/lib/billing/close")
     // Reusa o tenant do 1º teste (fatura 'paid' com total 700).
