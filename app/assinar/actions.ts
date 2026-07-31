@@ -5,6 +5,8 @@ import { redirect } from "next/navigation"
 import { signOut } from "@/auth"
 import { checkoutSignup, CheckoutError, type CheckoutProduto } from "@/lib/signup/checkout"
 import { PaymentError } from "@/lib/payments/asaas"
+import { verifyTurnstile } from "@/lib/signup/turnstile"
+import { assertCheckoutAllowed, RateLimitError } from "@/lib/signup/rate-limit"
 
 export type SignupState = { error?: string }
 
@@ -18,12 +20,25 @@ export async function signupAction(_prev: SignupState, form: FormData): Promise<
   // IP do cliente (Asaas exige no cartão). Atrás do proxy do Coolify.
   const h = await headers()
   const remoteIp = (h.get("x-forwarded-for") ?? "").split(",")[0].trim() || h.get("x-real-ip") || "127.0.0.1"
+  const email = String(form.get("email") ?? "").trim()
+
+  // Anti-abuso: captcha (Turnstile) + rate-limit por IP/e-mail — ANTES de criar
+  // qualquer coisa ou tocar no Asaas.
+  if (!(await verifyTurnstile(String(form.get("captchaToken") ?? ""), remoteIp))) {
+    return { error: "Verificação anti-robô falhou. Recarregue a página e tente de novo." }
+  }
+  try {
+    await assertCheckoutAllowed(remoteIp, email)
+  } catch (e) {
+    if (e instanceof RateLimitError) return { error: e.message }
+    throw e
+  }
 
   try {
     await checkoutSignup({
       name: String(form.get("name") ?? "").trim(),
       taxId: String(form.get("taxId") ?? "").replace(/\D/g, ""),
-      email: String(form.get("email") ?? "").trim(),
+      email,
       password,
       produto: String(form.get("produto") ?? "") as CheckoutProduto,
       tier: String(form.get("tier") ?? ""),

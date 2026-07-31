@@ -1,7 +1,12 @@
 "use client"
 
 import { useActionState, useState } from "react"
+import Script from "next/script"
 import { signupAction, type SignupState } from "./actions"
+
+// Site key pública do Turnstile (inline em build por ser NEXT_PUBLIC_). Vazia =
+// captcha desligado (o server também passa direto — ver lib/signup/turnstile.ts).
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
 
 const initial: SignupState = {}
 const field =
@@ -164,6 +169,18 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
         <span className="text-muted-foreground">Telefone (com DDD)</span>
         <input name="phone" required inputMode="tel" autoComplete="tel" placeholder="(11) 90000-0000" value={f.phone} onChange={set("phone")} className={field} />
       </label>
+
+      {TURNSTILE_SITE_KEY && (
+        <>
+          <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer />
+          {/* O widget injeta um input `captchaToken` no form ao ser resolvido. */}
+          <div
+            className="cf-turnstile mt-2"
+            data-sitekey={TURNSTILE_SITE_KEY}
+            data-response-field-name="captchaToken"
+          />
+        </>
+      )}
 
       {state.error && (
         <p className="text-sm text-destructive" role="alert">

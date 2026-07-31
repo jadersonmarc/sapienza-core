@@ -178,6 +178,20 @@ export const eventOutbox = pgTable("event_outbox", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("event_outbox_id_idx").on(t.id)])
 
+// ── checkout_attempts (rate-limit do checkout público; janela por IP+e-mail) ──
+// O endpoint público cria tenant + tenta cobrança; sem barreira é superfície de
+// fraude de cartão. Registra cada tentativa; lib/signup/rate-limit.ts conta na
+// janela. Sem Redis (CLAUDE.md) → contagem em Postgres.
+export const checkoutAttempts = pgTable("checkout_attempts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  ip: text("ip"),
+  email: text("email"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index("checkout_attempts_ip_idx").on(t.ip, t.createdAt),
+  index("checkout_attempts_email_idx").on(t.email, t.createdAt),
+])
+
 // ── email_deliveries (dedupe do consumer de e-mail; entrega at-least-once) ─────
 // O consumer `mailer` drena o event_outbox e envia 1 e-mail por evento. Grava o
 // event_id aqui ANTES de enviar (por transação): reprocessar o mesmo evento não
