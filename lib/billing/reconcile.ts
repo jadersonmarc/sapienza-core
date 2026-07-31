@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
+import { emitEvent } from "@/lib/events/emit"
 
 // Reconciliação de pagamento a partir do webhook do provedor. Idempotente: o
 // provedor pode reentregar o mesmo evento. A fatura é achada por externalReference
@@ -38,6 +39,15 @@ export async function applyPaymentReceived(chargeId: string | null, externalRef:
       INSERT INTO public.audit_log (tenant_id, action, detail)
       VALUES (${inv.tenant_id}::uuid, 'invoice.paid', ${JSON.stringify({ invoice: inv.id })}::jsonb)
     `)
+    // E-mail de recibo (consumer `mailer` drena o outbox). Emitido na MESMA tx.
+    const [meta] = (await tx.execute(sql`
+      SELECT period, total_brl FROM public.invoices WHERE id = ${inv.id}::uuid
+    `)) as unknown as { period: string; total_brl: string }[]
+    await emitEvent(tx, {
+      type: "PaymentReceived",
+      tenantId: inv.tenant_id,
+      payload: { invoice_id: inv.id, period: meta?.period, total_brl: meta?.total_brl },
+    })
   })
   return true
 }

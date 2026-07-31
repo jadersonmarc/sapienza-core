@@ -4,6 +4,7 @@ import { createTenant } from "@/lib/tenant/create"
 import { deleteTenant } from "@/lib/tenant/delete"
 import { saveBillingIdentity } from "@/lib/tenant/billing"
 import { activateSubscription } from "@/lib/provisioning/activate"
+import { emitEvent } from "@/lib/events/emit"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
 import { comboFor, type ProdutoId } from "@/lib/pricing/load"
@@ -180,6 +181,16 @@ export async function checkoutSignup(
       UPDATE public.invoices SET provider_charge_id = ${sub.id}, due_date = ${dueInDays(3)}::date
        WHERE id = ${invoice.id}::uuid
     `)
+
+    // 7) E-mail de boas-vindas (consumer `mailer` drena o outbox). O cliente já
+    // escolheu a senha no checkout → needs_password_setup:false.
+    await db.transaction(async (tx) => {
+      await emitEvent(tx, {
+        type: "WelcomeOwner",
+        tenantId,
+        payload: { email, needs_password_setup: false },
+      })
+    })
 
     return { tenantId, invoiceId: invoice.id }
   } catch (e) {
