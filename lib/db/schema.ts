@@ -8,6 +8,7 @@ import {
   jsonb,
   boolean,
   integer,
+  smallint,
   numeric,
   bigserial,
   bigint,
@@ -137,6 +138,10 @@ export const invoices = pgTable("invoices", {
   paymentUrl: text("payment_url"),
   dueDate: date("due_date"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+  // Dunning (inadimplência): 0=nenhum, 1=venceu, 2=aviso de bloqueio, 3=bloqueado,
+  // 4=cancelado. O cron de dunning só avança pra frente (idempotência). Ver
+  // app/api/cron/dunning/route.ts.
+  dunningStage: smallint("dunning_stage").notNull().default(0),
   issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [
   uniqueIndex("invoices_tenant_period_idx").on(t.tenantId, t.period),

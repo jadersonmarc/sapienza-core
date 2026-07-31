@@ -28,7 +28,7 @@ export async function applyPaymentReceived(chargeId: string | null, externalRef:
   if (inv.status === "paid") return true // já reconciliado
   await db.transaction(async (tx) => {
     await tx.execute(sql`
-      UPDATE public.invoices SET status = 'paid', paid_at = now() WHERE id = ${inv.id}::uuid
+      UPDATE public.invoices SET status = 'paid', paid_at = now(), dunning_stage = 0 WHERE id = ${inv.id}::uuid
     `)
     // Pagou → destrava os produtos (past_due volta a active).
     await tx.execute(sql`
@@ -53,8 +53,10 @@ export async function applyPaymentReceived(chargeId: string | null, externalRef:
 }
 
 /**
- * Cobrança vencida: marca a fatura como overdue e coloca as assinaturas ativas em
- * past_due — o gating (canOperate exige active) bloqueia Margot e Motor.
+ * Cobrança vencida: marca a fatura como overdue. NÃO bloqueia na hora — começa o
+ * grace period. Quem bloqueia (past_due) e cancela é o cron de dunning, por
+ * estágio/dias desde o vencimento (app/api/cron/dunning/route.ts). Assim o acesso
+ * segue durante o grace de 3 dias enquanto o Asaas re-tenta a recorrência do cartão.
  */
 export async function applyPaymentOverdue(chargeId: string | null, externalRef: string | null): Promise<boolean> {
   const inv = await findInvoice(chargeId, externalRef)
@@ -63,10 +65,6 @@ export async function applyPaymentOverdue(chargeId: string | null, externalRef: 
   await db.transaction(async (tx) => {
     await tx.execute(sql`
       UPDATE public.invoices SET status = 'overdue' WHERE id = ${inv.id}::uuid AND status <> 'paid'
-    `)
-    await tx.execute(sql`
-      UPDATE public.subscriptions SET status = 'past_due', updated_at = now()
-       WHERE tenant_id = ${inv.tenant_id}::uuid AND status = 'active'
     `)
     await tx.execute(sql`
       INSERT INTO public.audit_log (tenant_id, action, detail)
