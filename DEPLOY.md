@@ -309,7 +309,7 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 
 | Repo | Secrets | Jobs |
 |---|---|---|
-| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC) |
+| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC), `dunning` (diário, 07:00 UTC), `email-dispatch` (5min) |
 | `sapienza-motor` | `MOTOR_URL`, `MOTION_URL`, `WEBHOOK_SECRET` | `publish-scheduled` (10min), `close-approval-window` (15min), `provision` (1h), `generate-draft` (seg/qua/sex), `render-motion` (5min) |
 
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
@@ -353,6 +353,47 @@ SELECT period, total_brl, lines FROM invoices WHERE tenant_id = '<uuid>';
 `sapienza-motor/scripts/e2e.sh` faz esse caminho de forma automatizada contra um Postgres —
 vale rodar localmente antes de repetir em produção.
 
+## 8b. Teste de pagamento real (produção) — FAÇA UMA VEZ
+
+O fluxo cartão → webhook → ativação precisa ser provado **uma vez** contra o Asaas de
+produção, com cartão real. Não é teste automatizado — é este checklist.
+
+**Pré-requisitos (infra do usuário):**
+- Conta Asaas **produção** aprovada e habilitada a cartão.
+- Envs de produção no serviço `core`: `ASAAS_BASE_URL=https://api.asaas.com/v3`,
+  `ASAAS_API_KEY=<chave de produção>`, `ASAAS_WEBHOOK_TOKEN=<token>`.
+- No painel Asaas → **Integrações → Webhooks**: URL `https://console.seudominio.com/api/webhooks/asaas`,
+  eventos de pagamento (RECEIVED/CONFIRMED/OVERDUE), header `asaas-access-token` = o mesmo `ASAAS_WEBHOOK_TOKEN`.
+- (E-mail) `RESEND_API_KEY` + `MAIL_FROM` (domínio verificado no Resend) + `CONSOLE_URL` — senão os
+  e-mails caem em no-op (não bloqueia o teste de pagamento, só não envia recibo/boas-vindas).
+
+**Passos:**
+1. Acesse `https://console.seudominio.com/assinar?produto=motor&tier=pro` e finalize com um **cartão real**.
+2. No banco, a conta nasce bloqueada:
+   ```sql
+   SELECT status FROM subscriptions WHERE tenant_id='<uuid>';   -- past_due
+   SELECT status, provider_charge_id FROM invoices WHERE tenant_id='<uuid>';  -- issued, com id da cobrança
+   ```
+3. Aguarde o webhook do 1º pagamento (segundos). Confirme a virada:
+   ```sql
+   SELECT status FROM subscriptions WHERE tenant_id='<uuid>';   -- active
+   SELECT status, paid_at FROM invoices WHERE tenant_id='<uuid>'; -- paid, paid_at preenchido
+   ```
+4. Confirme que o fechamento mensal **não** recobra a fatura de ativação já paga:
+   ```bash
+   curl --fail-with-body -sS -X POST "$CORE_URL/api/cron/billing-close" \
+     -H "x-webhook-secret: $WEBHOOK_SECRET" -H "content-type: application/json" \
+     -d '{"period":"<AAAA-MM corrente>"}' | jq .
+   ```
+   A fatura de ativação continua `paid` com o mesmo total (o `close` só cobra excedente > incluído).
+5. (Se e-mail ligado) confirme o recibo/boas-vindas: o cron `email-dispatch` envia; veja `email_deliveries`
+   e a caixa de entrada.
+6. **Cancele** essa assinatura de teste no `/super` (cancela a recorrência no Asaas — senão o cartão
+   segue sendo cobrado todo mês).
+
+Se o passo 3 não virar `active`, o webhook não chegou: revise a URL/token no painel Asaas e o
+`ASAAS_WEBHOOK_TOKEN` do serviço (401 no `/api/webhooks/asaas` = token não bate).
+
 ## 9. Rollback
 
 Coolify → Deployments → redeploy da versão anterior. **As migrations são forward-only**: voltar
@@ -376,6 +417,8 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | `MARGOT_PUBLIC_URL` | — | ✅ | — | destino do webhook no onboarding por QR |
 | `ANTHROPIC_API_KEY` | — | ✅ | ✅ | IA |
 | `S3_*` | — | — | opcional | só p/ Instagram/Threads |
+| `ASAAS_BASE_URL` / `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` | ✅ | — | — | cobrança (produção: `api.asaas.com/v3`) |
+| `RESEND_API_KEY` / `MAIL_FROM` / `CONSOLE_URL` | opcional | — | — | e-mail transacional (sem eles: no-op) |
 
 ## Problemas comuns
 

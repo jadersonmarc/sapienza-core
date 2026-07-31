@@ -1,0 +1,22 @@
+name: Dunning (inadimplência)
+
+# Escala faturas vencidas: e-mails (dia 0/2) → bloqueio (dia 3) → cancelamento
+# (dia 15). Idempotente (dunning_stage). 1×/dia, 07:00 UTC.
+# Secrets: CORE_URL, WEBHOOK_SECRET.
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+jobs:
+  dunning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/cron/dunning
+        env:
+          CORE_URL: ${{ secrets.CORE_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -X POST "$CORE_URL/api/cron/dunning" \
+            -H "x-webhook-secret: $WEBHOOK_SECRET" | jq .

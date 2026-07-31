@@ -1,0 +1,22 @@
+name: Enviar e-mails transacionais
+
+# Drena o event_outbox e envia os e-mails (consumer `mailer`). A cada 5 min.
+# Idempotente (dedupe em email_deliveries). Secrets: CORE_URL, WEBHOOK_SECRET.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST /api/cron/email-dispatch
+        env:
+          CORE_URL: ${{ secrets.CORE_URL }}
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          # Sem -L: redirect = middleware capturou a rota (não deve).
+          curl --fail-with-body -sS -X POST "$CORE_URL/api/cron/email-dispatch" \
+            -H "x-webhook-secret: $WEBHOOK_SECRET" | jq .
