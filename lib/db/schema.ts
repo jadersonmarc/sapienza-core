@@ -10,6 +10,7 @@ import {
   integer,
   numeric,
   bigserial,
+  bigint,
   index,
   uniqueIndex,
   primaryKey,
@@ -171,3 +172,12 @@ export const eventOutbox = pgTable("event_outbox", {
   payload: jsonb("payload").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("event_outbox_id_idx").on(t.id)])
+
+// ── email_deliveries (dedupe do consumer de e-mail; entrega at-least-once) ─────
+// O consumer `mailer` drena o event_outbox e envia 1 e-mail por evento. Grava o
+// event_id aqui ANTES de enviar (por transação): reprocessar o mesmo evento não
+// dispara e-mail duplicado. Ver lib/email/consumer.ts.
+export const emailDeliveries = pgTable("email_deliveries", {
+  eventId: bigint("event_id", { mode: "number" }).primaryKey(),
+  sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
+})

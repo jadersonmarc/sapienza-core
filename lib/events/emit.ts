@@ -17,6 +17,16 @@ export type EventType =
   | "MemberInvited"
   | "MemberRemoved"
   | "DowngradeBlockedBySeats"
+  // E-mail transacional (consumidos só pelo consumer `mailer` do core; sem
+  // consumidor Go — não entram no kit/events). Ver lib/email/consumer.ts.
+  | "WelcomeOwner"
+  | "PaymentReceived"
+  | "InvoiceOverdue"
+  | "BlockImminent"
+  | "SubscriptionBlocked"
+  | "SubscriptionCanceled"
+  | "PasswordResetRequested"
+  | "EmailVerificationRequested"
 
 /**
  * Grava um evento no outbox dentro de uma transação drizzle.
