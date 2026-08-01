@@ -275,6 +275,35 @@ export async function getContentStats(ctx: MotorCtx, period?: string): Promise<M
   return call<MotorStats>(ctx, `/api/v1/content/stats${q}`)
 }
 
+export type TopPost = {
+  slug: string
+  title: string | null
+  pilar: string | null
+  format: string
+  impressions: number
+  likes: number
+  comments: number
+}
+
+export async function getTopPosts(
+  ctx: MotorCtx,
+  period?: string,
+  limit?: number,
+): Promise<{ period: string; top: TopPost[] }> {
+  const p = new URLSearchParams()
+  if (period && /^\d{4}-\d{2}$/.test(period)) p.set("period", period)
+  if (limit && Number.isFinite(limit)) p.set("limit", String(Math.trunc(limit)))
+  const q = p.toString() ? `?${p.toString()}` : ""
+  return call(ctx, `/api/v1/content/stats/top${q}`)
+}
+
+export type ByConfigRow = { config_version: number | null; posts: number; impressions: number; avg_impressions: number }
+
+export async function getByConfig(ctx: MotorCtx, period?: string): Promise<{ period: string; byConfig: ByConfigRow[] }> {
+  const q = period && /^\d{4}-\d{2}$/.test(period) ? `?period=${period}` : ""
+  return call(ctx, `/api/v1/content/stats/by-config${q}`)
+}
+
 /** Gera a imagem on-brand da peça no formato do canal e a persiste. */
 export async function generatePieceImage(ctx: MotorCtx, id: string): Promise<{ image_url: string }> {
   return call<{ image_url: string }>(ctx, `/api/v1/content/${id}/image`, { method: "POST", body: "{}" })

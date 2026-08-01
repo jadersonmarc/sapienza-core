@@ -3,7 +3,7 @@ import { tenantSubscriptions } from "@/lib/tenant/context"
 import { askStream, isAssistantConfigured } from "@/lib/insights/assistant"
 import type { Subs } from "@/lib/insights/tools"
 import { listConversations, createConversation, getMessages, appendMessage } from "@/lib/insights/store"
-import { getContentStats, motorContext } from "@/lib/motor/client"
+import { getContentStats, getTopPosts, getByConfig, motorContext } from "@/lib/motor/client"
 import { getStats, margotContext } from "@/lib/margot/client"
 
 export const runtime = "nodejs"
@@ -44,7 +44,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const deps = {
     editoraStats: async (period?: string) => getContentStats(await motorContext(), period),
-    atendenteStats: async () => getStats(await margotContext()),
+    editoraTopPosts: async (period?: string, limit?: number) => getTopPosts(await motorContext(), period, limit),
+    editoraByConfig: async (period?: string) => getByConfig(await motorContext(), period),
+    atendenteStats: async (period?: string) => getStats(await margotContext(), period),
   }
 
   const stream = askStream([...history, { role: "user", content: message }], subs, deps, async (fullText) => {

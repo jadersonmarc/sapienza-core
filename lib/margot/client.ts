@@ -127,8 +127,9 @@ export type MargotStats = {
   }
 }
 
-export async function getStats(ctx: MargotCtx): Promise<MargotStats> {
-  return call<MargotStats>(ctx, "/api/v1/stats")
+export async function getStats(ctx: MargotCtx, period?: string): Promise<MargotStats> {
+  const q = period && /^\d{4}-\d{2}$/.test(period) ? `?period=${period}` : ""
+  return call<MargotStats>(ctx, `/api/v1/stats${q}`)
 }
 
 export async function suggestReply(ctx: MargotCtx, convId: string): Promise<string> {
