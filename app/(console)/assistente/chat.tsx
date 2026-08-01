@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
-import { askAssistant } from "./actions"
+import { useState } from "react"
 import type { ChatTurn } from "@/lib/insights/assistant"
 
 const field =
@@ -11,29 +10,54 @@ export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
   const [history, setHistory] = useState<ChatTurn[]>([])
   const [input, setInput] = useState("")
   const [error, setError] = useState<string | null>(null)
-  const [pending, startTransition] = useTransition()
+  const [pending, setPending] = useState(false)
 
   const suggestions = [
     ...(motor ? ["Como foi meu mês no conteúdo?", "Qual pilar teve mais impressões?"] : []),
     ...(margot ? ["Quantas respostas e handoffs tivemos?", "Quanto do plano já usei?"] : []),
   ]
 
-  function send(text: string) {
+  async function send(text: string) {
     const q = text.trim()
     if (!q || pending) return
     const next: ChatTurn[] = [...history, { role: "user", content: q }]
     setHistory(next)
     setInput("")
     setError(null)
-    startTransition(async () => {
-      const res = await askAssistant(next)
-      if (res.error) {
-        setError(res.error)
+    setPending(true)
+    try {
+      const res = await fetch("/assistente/stream", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ history: next }),
+      })
+      if (!res.ok || !res.body) {
+        setError((await res.text().catch(() => "")) || "Falha ao consultar o assistente.")
         return
       }
-      setHistory((h) => [...h, { role: "assistant", content: res.reply ?? "" }])
-    })
+      // Mensagem do assistente que vai sendo preenchida conforme o stream chega.
+      setHistory((h) => [...h, { role: "assistant", content: "" }])
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = dec.decode(value, { stream: true })
+        setHistory((h) => {
+          const copy = [...h]
+          const last = copy[copy.length - 1]
+          copy[copy.length - 1] = { role: "assistant", content: last.content + chunk }
+          return copy
+        })
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha de rede.")
+    } finally {
+      setPending(false)
+    }
   }
+
+  const lastIsStreamingAssistant = pending && history.at(-1)?.role === "assistant"
 
   return (
     <div className="flex flex-col gap-3">
@@ -61,11 +85,11 @@ export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
                 m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}
             >
-              {m.content}
+              {m.content || "…"}
             </span>
           </div>
         ))}
-        {pending && <p className="text-sm text-muted-foreground">Analisando…</p>}
+        {pending && !lastIsStreamingAssistant && <p className="text-sm text-muted-foreground">Analisando…</p>}
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
 

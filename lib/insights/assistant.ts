@@ -78,3 +78,58 @@ export async function ask(history: ChatTurn[], subs: Subs, deps: ToolDeps): Prom
 
   return { reply: "Não consegui concluir a análise (muitas etapas). Tente reformular a pergunta.", usedTools }
 }
+
+/** Versão em streaming: devolve um ReadableStream de texto (os deltas da resposta
+ *  do modelo). O loop de tool-use roda por dentro; deltas de texto de qualquer
+ *  turno são encaminhados na hora. Mesma segurança (tenant nas deps, nunca no modelo). */
+export function askStream(history: ChatTurn[], subs: Subs, deps: ToolDeps): ReadableStream<Uint8Array> {
+  const enc = new TextEncoder()
+  const tools = toolsFor(subs)
+  const messages: Anthropic.MessageParam[] = history.map((t) => ({ role: t.role, content: t.content }))
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const client = new Anthropic()
+      try {
+        for (let turn = 0; turn < MAX_TURNS; turn++) {
+          const stream = client.messages.stream({
+            model: ASSISTANT_MODEL,
+            max_tokens: 2000,
+            thinking: { type: "adaptive" },
+            output_config: { effort: "low" },
+            system: SYSTEM,
+            tools,
+            messages,
+          } as unknown as Anthropic.MessageStreamParams)
+
+          stream.on("text", (delta) => controller.enqueue(enc.encode(delta)))
+          const msg = await stream.finalMessage()
+
+          if (msg.stop_reason === "refusal") {
+            controller.enqueue(enc.encode("Não posso responder a isso (política de conteúdo)."))
+            break
+          }
+          messages.push({ role: "assistant", content: msg.content })
+          if (msg.stop_reason !== "tool_use") break
+
+          const results: Anthropic.ToolResultBlockParam[] = []
+          for (const b of msg.content) {
+            if (b.type !== "tool_use") continue
+            let out: unknown
+            try {
+              out = await runTool(b.name, b.input, subs, deps)
+            } catch (e) {
+              out = { error: e instanceof Error ? e.message : String(e) }
+            }
+            results.push({ type: "tool_result", tool_use_id: b.id, content: JSON.stringify(out) })
+          }
+          messages.push({ role: "user", content: results })
+        }
+      } catch (e) {
+        controller.enqueue(enc.encode(`\n\n[erro: ${e instanceof Error ? e.message : String(e)}]`))
+      } finally {
+        controller.close()
+      }
+    },
+  })
+}
