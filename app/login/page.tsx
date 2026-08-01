@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button"
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; assinou?: string }>
+  searchParams: Promise<{ error?: string; assinou?: string; senha?: string }>
 }) {
   const session = await auth()
   if (session?.user) redirect("/")
-  const { error, assinou } = await searchParams
+  const { error, assinou, senha } = await searchParams
 
   async function login(formData: FormData) {
     "use server"
@@ -41,6 +41,11 @@ export default async function LoginPage({
             Pagamento confirmado! Entre com o e-mail e a senha que você cadastrou.
           </p>
         )}
+        {senha && (
+          <p className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
+            Senha redefinida. Entre com a nova senha.
+          </p>
+        )}
       </div>
 
       <form action={login} className="space-y-4">
@@ -63,6 +68,10 @@ export default async function LoginPage({
         )}
         <Button type="submit" className="w-full">Entrar</Button>
       </form>
+
+      <a href="/recuperar-senha" className="-mt-4 text-sm text-muted-foreground hover:underline">
+        Esqueci a senha
+      </a>
     </main>
   )
 }

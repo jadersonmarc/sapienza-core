@@ -12,5 +12,7 @@ export const config = {
   // redirecionar para /login. Dentro do matcher, o callback authorized() faria 307.
   // `api/webhooks` (pagamento) também: sem sessão, se protege pelo token do provedor.
   // `assinar` (cadastro + pagamento self-service) é público: o lead ainda não tem conta.
-  matcher: ["/((?!api/auth|api/cron|api/webhooks|health|_next/static|_next/image|favicon.ico|login|assinar|logo-sapienza.png).*)"],
+  // `recuperar-senha`/`redefinir-senha`/`verificar-email`: fluxos por link de e-mail,
+  // sem sessão (o token é a credencial).
+  matcher: ["/((?!api/auth|api/cron|api/webhooks|health|_next/static|_next/image|favicon.ico|login|assinar|recuperar-senha|redefinir-senha|verificar-email|logo-sapienza.png).*)"],
 }

@@ -56,9 +56,23 @@ export const users = pgTable("users", {
   isSuperadmin: boolean("is_superadmin").notNull().default(false),
   // Bump invalida sessões JWT antigas (após troca de senha).
   sessionVersion: integer("session_version").notNull().default(0),
+  // Verificação de e-mail (soft): null = não confirmado. Não bloqueia acesso.
+  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
+
+// ── auth_tokens (reset de senha + verificação de e-mail) ─────────────────────
+// Token aleatório guardado por HASH (sha256). Single-use (used_at) + expiração.
+// Ver lib/auth/tokens.ts.
+export const authTokens = pgTable("auth_tokens", {
+  tokenHash: text("token_hash").primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // 'password_reset' | 'email_verify'
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("auth_tokens_user_idx").on(t.userId)])
 
 // ── memberships (usuário ↔ tenant ↔ role) ────────────────────────────────────
 export const memberships = pgTable("memberships", {
