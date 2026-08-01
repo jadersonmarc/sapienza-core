@@ -5,6 +5,7 @@ import { deleteTenant } from "@/lib/tenant/delete"
 import { saveBillingIdentity } from "@/lib/tenant/billing"
 import { activateSubscription } from "@/lib/provisioning/activate"
 import { emitEvent } from "@/lib/events/emit"
+import { requestEmailVerification } from "@/lib/auth/account"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
 import { comboFor, type ProdutoId } from "@/lib/pricing/load"
@@ -182,8 +183,8 @@ export async function checkoutSignup(
        WHERE id = ${invoice.id}::uuid
     `)
 
-    // 7) E-mail de boas-vindas (consumer `mailer` drena o outbox). O cliente já
-    // escolheu a senha no checkout → needs_password_setup:false.
+    // 7) E-mails: boas-vindas (cliente já escolheu a senha → needs_password_setup:
+    // false) + verificação de e-mail (soft, não bloqueia). Consumer `mailer` envia.
     await db.transaction(async (tx) => {
       await emitEvent(tx, {
         type: "WelcomeOwner",
@@ -191,6 +192,10 @@ export async function checkoutSignup(
         payload: { email, needs_password_setup: false },
       })
     })
+    const [owner] = (await db.execute(sql`
+      SELECT id FROM public.users WHERE lower(email) = ${email.toLowerCase()}
+    `)) as unknown as { id: string }[]
+    if (owner) await requestEmailVerification(owner.id, email)
 
     return { tenantId, invoiceId: invoice.id }
   } catch (e) {
