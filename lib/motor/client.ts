@@ -270,8 +270,9 @@ export type MotorStats = {
   byPillar: { pilar: string | null; impressions: number; posts: number }[]
 }
 
-export async function getContentStats(ctx: MotorCtx): Promise<MotorStats> {
-  return call<MotorStats>(ctx, "/api/v1/content/stats")
+export async function getContentStats(ctx: MotorCtx, period?: string): Promise<MotorStats> {
+  const q = period && /^\d{4}-\d{2}$/.test(period) ? `?period=${period}` : ""
+  return call<MotorStats>(ctx, `/api/v1/content/stats${q}`)
 }
 
 /** Gera a imagem on-brand da peça no formato do canal e a persiste. */
