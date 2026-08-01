@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, listContent, MotorError } from "@/lib/motor/client"
+import { motorContext, listContent, getContentStats, MotorError, type MotorStats } from "@/lib/motor/client"
 import { motorMonthlyBilling, motorInvoiceHistory, currentPeriod } from "@/lib/motor/report"
 import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
@@ -40,6 +40,13 @@ export default async function RelatorioPage() {
     items = await listContent(ctx)
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
+  }
+
+  let stats: MotorStats | null = null
+  try {
+    stats = await getContentStats(ctx)
+  } catch {
+    stats = null // desempenho é best-effort; a coleta pode ainda não ter rodado
   }
 
   const byStatus = items.reduce<Record<string, number>>((acc, it) => {
@@ -160,6 +167,34 @@ export default async function RelatorioPage() {
                 </span>
               ))}
             </div>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Desempenho dos posts (mês)</h2>
+        {!stats || stats.totals.posts === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Sem métricas ainda — os dados aparecem depois que os canais estão conectados e a coleta
+            diária roda. (Coleta pelo Instagram; demais canais conforme validados.)
+          </p>
+        ) : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Stat label="Impressões" value={stats.totals.impressions.toLocaleString("pt-BR")} hint={`${stats.totals.posts} post(s)`} />
+              <Stat label="Alcance" value={stats.totals.reach.toLocaleString("pt-BR")} />
+              <Stat label="Curtidas" value={stats.totals.likes.toLocaleString("pt-BR")} />
+              <Stat label="Comentários" value={stats.totals.comments.toLocaleString("pt-BR")} />
+            </div>
+            {stats.byPillar.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {stats.byPillar.map((p) => (
+                  <span key={p.pilar ?? "—"} className="rounded-lg border border-border px-3 py-1.5 text-xs">
+                    pilar {p.pilar ?? "—"}: <span className="font-mono">{p.impressions.toLocaleString("pt-BR")}</span> impr.
+                  </span>
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>

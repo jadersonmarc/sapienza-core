@@ -262,6 +262,18 @@ export async function getChannels(ctx: MotorCtx): Promise<ChannelsStatus> {
   return call<ChannelsStatus>(ctx, "/api/v1/channels")
 }
 
+// Desempenho das peças — série temporal diária + totais + quebra por pilar.
+export type MotorStats = {
+  period: string
+  series: { day: string; impressions: number; reach: number; likes: number; comments: number; shares: number }[]
+  totals: { impressions: number; reach: number; likes: number; comments: number; shares: number; posts: number }
+  byPillar: { pilar: string | null; impressions: number; posts: number }[]
+}
+
+export async function getContentStats(ctx: MotorCtx): Promise<MotorStats> {
+  return call<MotorStats>(ctx, "/api/v1/content/stats")
+}
+
 /** Gera a imagem on-brand da peça no formato do canal e a persiste. */
 export async function generatePieceImage(ctx: MotorCtx, id: string): Promise<{ image_url: string }> {
   return call<{ image_url: string }>(ctx, `/api/v1/content/${id}/image`, { method: "POST", body: "{}" })

@@ -113,6 +113,24 @@ export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {
   return call<AgentConfig>(ctx, "/api/v1/config")
 }
 
+// Desempenho da Atendente — série temporal diária + totais (uso vs incluído).
+export type MargotStats = {
+  period: string
+  series: { day: string; respostas: number; conversas: number; handoffs: number }[]
+  totals: {
+    uso: number
+    incluido: number
+    respostas: number
+    conversas: number
+    handoffs: number
+    taxa_handoff: number
+  }
+}
+
+export async function getStats(ctx: MargotCtx): Promise<MargotStats> {
+  return call<MargotStats>(ctx, "/api/v1/stats")
+}
+
 export async function suggestReply(ctx: MargotCtx, convId: string): Promise<string> {
   const r = await call<{ suggestion: string }>(ctx, `/api/v1/conversations/${convId}/suggest`, {
     method: "POST",

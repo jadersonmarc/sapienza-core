@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { margotContext, getSetup, MargotError } from "@/lib/margot/client"
+import { margotContext, getSetup, getStats, MargotError, type MargotStats } from "@/lib/margot/client"
 import type { SetupStatus } from "@/lib/margot/types"
 
 function Check({ ok, label, hint }: { ok: boolean; label: string; hint?: string }) {
@@ -31,6 +31,13 @@ export default async function MargotPage() {
     setup = await getSetup(ctx)
   } catch (e) {
     unavailable = e instanceof MargotError ? `${e.status} — ${e.message}` : "serviço indisponível"
+  }
+
+  let stats: MargotStats | null = null
+  try {
+    stats = await getStats(ctx)
+  } catch {
+    stats = null // desempenho é best-effort
   }
 
   return (
@@ -103,6 +110,26 @@ export default async function MargotPage() {
             </ul>
           </div>
         )
+      )}
+
+      {stats && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Desempenho (mês)</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: "Respostas da IA", value: `${stats.totals.respostas}`, hint: `incluídas: ${stats.totals.incluido}` },
+              { label: "Uso vs incluído", value: `${stats.totals.uso}/${stats.totals.incluido || "∞"}` },
+              { label: "Conversas", value: `${stats.totals.conversas}` },
+              { label: "Handoffs", value: `${stats.totals.handoffs}`, hint: `${Math.round(stats.totals.taxa_handoff * 100)}% das conversas` },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border border-border p-4">
+                <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">{s.label}</p>
+                <p className="mt-1 font-display text-2xl font-semibold tracking-tight">{s.value}</p>
+                {s.hint && <p className="mt-1 text-xs text-muted-foreground">{s.hint}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   )
