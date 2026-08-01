@@ -100,6 +100,17 @@ export function buildEmail(type: string, payload: Payload, to: string): EmailMes
         button(link, "Confirmar e-mail")
       return { to, subject: "Confirme seu e-mail", html: layout("Confirmar e-mail", body) }
     }
+    case "ContentPublishFailed": {
+      const title = str(payload.title)
+      const failures = Array.isArray(payload.failures) ? (payload.failures as { platform?: unknown }[]) : []
+      const canais = failures.map((f) => str(f.platform)).filter(Boolean)
+      const lista = canais.length ? canais.join(", ") : "um ou mais canais"
+      const body =
+        p(`A publicação da peça${title ? ` "${title}"` : ""} falhou em: ${lista}.`) +
+        p("Os demais canais foram publicados normalmente. Você pode reprocessar só os que falharam no console.") +
+        button(`${CONSOLE_URL}/motor/conteudo`, "Abrir conteúdo")
+      return { to, subject: "Falha ao publicar em um canal", html: layout("Falha na publicação", body) }
+    }
     default:
       return null
   }
@@ -115,4 +126,5 @@ export const EMAIL_EVENT_TYPES = new Set<string>([
   "SubscriptionCanceled",
   "PasswordResetRequested",
   "EmailVerificationRequested",
+  "ContentPublishFailed",
 ])

@@ -27,6 +27,10 @@ export type EventType =
   | "SubscriptionCanceled"
   | "PasswordResetRequested"
   | "EmailVerificationRequested"
+  // Emitido pelo MOTOR (sapienza-motor/lib/platform/events.ts) quando a publicação
+  // de uma peça falha em algum canal; consumido aqui pelo `mailer`. Listado para o
+  // emitter/tipos do core reconhecerem o tipo (o core em si não o produz).
+  | "ContentPublishFailed"
 
 /**
  * Grava um evento no outbox dentro de uma transação drizzle.

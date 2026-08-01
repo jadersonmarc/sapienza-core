@@ -85,6 +85,22 @@ maybe("consumer de e-mail (mailer)", () => {
     expect(fake.sent[0].to).toBe("lead@x.com") // payload vence o owner
   })
 
+  it("ContentPublishFailed (motor) → e-mail ao owner citando os canais que falharam", async () => {
+    const tid = await tenantWithOwner("owner4@x.com")
+    await db.transaction((tx) =>
+      emitEvent(tx, {
+        type: "ContentPublishFailed",
+        tenantId: tid,
+        payload: { item_id: "abc", title: "Minha peça", failures: [{ platform: "instagram", error: "429" }] },
+      }),
+    )
+    await dispatchAll()
+    expect(fake.sent).toHaveLength(1)
+    expect(fake.sent[0].to).toBe("owner4@x.com") // sem email no payload → owner do tenant
+    expect(fake.sent[0].subject).toMatch(/falha/i)
+    expect(fake.sent[0].html).toContain("instagram")
+  })
+
   it("evento que não gera e-mail é ignorado, mas o cursor avança", async () => {
     const tid = await tenantWithOwner("owner3@x.com")
     await db.transaction((tx) => emitEvent(tx, { type: "InvoiceIssued", tenantId: tid, payload: { period: "2026-07" } }))
