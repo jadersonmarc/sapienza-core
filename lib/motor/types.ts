@@ -63,6 +63,8 @@ export type Platform =
 
 export type ChannelsStatus = {
   limit: number
+  used?: number // canais SOCIAIS conectados (o que entra no limite)
+  tier?: string | null
   channels: { platform: Platform; enabled: boolean }[]
 }
 

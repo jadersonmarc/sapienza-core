@@ -30,7 +30,9 @@ export default async function CanaisPage() {
         <h1 className="font-display text-2xl font-semibold tracking-tight">Canais de publicação</h1>
         {channels && (
           <p className="text-sm text-muted-foreground">
-            {channels.channels.length}/{channels.limit} canal(is) do plano em uso.
+            {channels.tier === "scale"
+              ? "Seu plano inclui todos os canais disponíveis."
+              : `${channels.used ?? 0} de ${channels.limit} canais sociais em uso. Blog e webhook não contam.`}
           </p>
         )}
       </div>

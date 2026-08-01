@@ -9,6 +9,7 @@ import { activateSubscription } from "@/lib/provisioning/activate"
 import { cancelSubscription, cancelAllSubscriptions } from "@/lib/provisioning/cancel"
 import { deleteTenant } from "@/lib/tenant/delete"
 import { SeatError } from "@/lib/billing/seats"
+import { ChannelDowngradeError } from "@/lib/billing/channels-downgrade"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 // Só o superadmin Sapienza cria tenant e ativa assinatura.
@@ -71,7 +72,7 @@ export async function activateSubscriptionAction(
     revalidatePath("/super")
     return { ok: true }
   } catch (e) {
-    if (e instanceof SeatError) return { error: e.message }
+    if (e instanceof SeatError || e instanceof ChannelDowngradeError) return { error: e.message }
     return { error: e instanceof Error ? e.message : "falha ao ativar assinatura" }
   }
 }

@@ -17,6 +17,7 @@ export type EventType =
   | "MemberInvited"
   | "MemberRemoved"
   | "DowngradeBlockedBySeats"
+  | "ChannelDowngradeBlocked"
   // E-mail transacional (consumidos só pelo consumer `mailer` do core; sem
   // consumidor Go — não entram no kit/events). Ver lib/email/consumer.ts.
   | "WelcomeOwner"

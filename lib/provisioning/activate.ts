@@ -9,6 +9,7 @@ import {
   seatsUsed,
   type Tier,
 } from "@/lib/billing/seats"
+import { assertChannelsAllowDowngrade } from "@/lib/billing/channels-downgrade"
 
 /** Nome do schema Postgres de um tenant: tenant_<uuid sem hífens>. */
 export function schemaName(tenantId: string): string {
@@ -45,6 +46,9 @@ export async function activateSubscription(args: {
   // ativo do tenant abaixo do necessário para os usuários atuais, recusar (o owner
   // remove os excedentes manualmente; nunca removemos usuários automaticamente).
   await assertSeatsAllowDowngrade(args.tenantId, args.produto, args.tier as Tier)
+  // Downgrade do motor abaixo dos canais sociais já conectados: trava até o cliente
+  // desconectar o excedente (a escolha é dele). Nunca desconectamos por heurística.
+  await assertChannelsAllowDowngrade(args.tenantId, args.produto, args.tier)
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`
