@@ -6,8 +6,19 @@ import type { ChatTurn } from "@/lib/insights/assistant"
 const field =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-ring focus:ring-1 focus:ring-ring"
 
-export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
-  const [history, setHistory] = useState<ChatTurn[]>([])
+export function Chat({
+  motor,
+  margot,
+  conversationId,
+  initialMessages,
+}: {
+  motor: boolean
+  margot: boolean
+  conversationId: string | null
+  initialMessages: ChatTurn[]
+}) {
+  const [history, setHistory] = useState<ChatTurn[]>(initialMessages)
+  const [convId, setConvId] = useState<string | null>(conversationId)
   const [input, setInput] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -20,8 +31,7 @@ export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
   async function send(text: string) {
     const q = text.trim()
     if (!q || pending) return
-    const next: ChatTurn[] = [...history, { role: "user", content: q }]
-    setHistory(next)
+    setHistory((h) => [...h, { role: "user", content: q }])
     setInput("")
     setError(null)
     setPending(true)
@@ -29,13 +39,18 @@ export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
       const res = await fetch("/assistente/stream", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ history: next }),
+        body: JSON.stringify({ conversationId: convId, message: q }),
       })
       if (!res.ok || !res.body) {
         setError((await res.text().catch(() => "")) || "Falha ao consultar o assistente.")
         return
       }
-      // Mensagem do assistente que vai sendo preenchida conforme o stream chega.
+      // Sincroniza o id da conversa (nova) na URL sem recarregar a página.
+      const cid = res.headers.get("x-conversation-id")
+      if (cid && cid !== convId) {
+        setConvId(cid)
+        window.history.replaceState(null, "", `/assistente?c=${cid}`)
+      }
       setHistory((h) => [...h, { role: "assistant", content: "" }])
       const reader = res.body.getReader()
       const dec = new TextDecoder()
@@ -61,7 +76,7 @@ export function Chat({ motor, margot }: { motor: boolean; margot: boolean }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="min-h-[240px] space-y-3 rounded-xl border border-border p-4">
+      <div className="min-h-[280px] space-y-3 rounded-xl border border-border p-4">
         {history.length === 0 && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Comece com uma pergunta:</p>

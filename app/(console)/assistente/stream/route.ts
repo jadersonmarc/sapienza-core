@@ -1,17 +1,20 @@
 import { currentContext } from "@/lib/console/current"
 import { tenantSubscriptions } from "@/lib/tenant/context"
-import { askStream, isAssistantConfigured, type ChatTurn } from "@/lib/insights/assistant"
+import { askStream, isAssistantConfigured } from "@/lib/insights/assistant"
 import type { Subs } from "@/lib/insights/tools"
+import { listConversations, createConversation, getMessages, appendMessage } from "@/lib/insights/store"
 import { getContentStats, motorContext } from "@/lib/motor/client"
 import { getStats, margotContext } from "@/lib/margot/client"
 
 export const runtime = "nodejs"
 
-// POST /assistente/stream — resposta do assistente em streaming (text/plain). O
-// histórico vem no corpo; o tenant é resolvido pela SESSÃO (nunca pelo modelo).
+// POST /assistente/stream — resposta em streaming (text/plain) + persistência.
+// Corpo: { conversationId?, message }. O histórico é carregado do BANCO (fonte da
+// verdade), não do cliente; tenant+user vêm da SESSÃO. Cabeçalho x-conversation-id
+// devolve o id (novo, quando a conversa é criada agora).
 export async function POST(req: Request): Promise<Response> {
   if (!isAssistantConfigured()) return new Response("assistente indisponível", { status: 503 })
-  const { active } = await currentContext()
+  const { active, user } = await currentContext()
   if (!active) return new Response("conta sem empresa vinculada", { status: 403 })
 
   const rawSubs = await tenantSubscriptions(active.id)
@@ -21,18 +24,39 @@ export async function POST(req: Request): Promise<Response> {
   }
   if (!subs.motor && !subs.margot) return new Response("nenhum produto ativo", { status: 403 })
 
-  const body = (await req.json().catch(() => ({}))) as { history?: ChatTurn[] }
-  const history = Array.isArray(body.history) ? body.history.filter((t) => t && (t.role === "user" || t.role === "assistant")) : []
-  if (history.length === 0) return new Response("histórico vazio", { status: 400 })
+  const body = (await req.json().catch(() => ({}))) as { conversationId?: string; message?: string }
+  const message = (body.message ?? "").trim()
+  if (!message) return new Response("mensagem vazia", { status: 400 })
 
-  // deps resolvem o tenant da sessão (motorContext/margotContext) — não do modelo.
+  // Conversa: reusa a informada (se pertencer a este tenant+user) ou cria uma nova.
+  let conversationId = body.conversationId ?? ""
+  let history: Awaited<ReturnType<typeof getMessages>> = []
+  if (conversationId) {
+    history = await getMessages(conversationId, active.id, user.id)
+    if (history.length === 0) conversationId = "" // não existe/não é dono → trata como nova
+  }
+  if (!conversationId) {
+    conversationId = await createConversation(active.id, user.id, message)
+  }
+
+  // Persiste a pergunta ANTES de responder (guarda de posse embutida no append).
+  await appendMessage(conversationId, active.id, user.id, "user", message)
+
   const deps = {
     editoraStats: async (period?: string) => getContentStats(await motorContext(), period),
     atendenteStats: async () => getStats(await margotContext()),
   }
 
-  const stream = askStream(history, subs, deps)
+  const stream = askStream([...history, { role: "user", content: message }], subs, deps, async (fullText) => {
+    await appendMessage(conversationId, active.id, user.id, "assistant", fullText)
+  })
+
   return new Response(stream, {
-    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" },
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      "cache-control": "no-store",
+      "x-accel-buffering": "no",
+      "x-conversation-id": conversationId,
+    },
   })
 }
