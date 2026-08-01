@@ -214,3 +214,23 @@ export const emailDeliveries = pgTable("email_deliveries", {
   eventId: bigint("event_id", { mode: "number" }).primaryKey(),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
 })
+
+// ── assistant chats (histórico do assistente de métricas; por tenant × usuário) ─
+// Control-plane (o core é dono do public). Escopado por tenant_id + user_id em
+// TODA query (lib/insights/store.ts) — não é schema-por-tenant.
+export const assistantConversations = pgTable("assistant_conversations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("assistant_conversations_owner_idx").on(t.tenantId, t.userId, t.updatedAt)])
+
+export const assistantMessages = pgTable("assistant_messages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  conversationId: uuid("conversation_id").notNull().references(() => assistantConversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // 'user' | 'assistant'
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("assistant_messages_conv_idx").on(t.conversationId, t.createdAt)])

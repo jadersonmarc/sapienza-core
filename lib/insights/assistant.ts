@@ -82,10 +82,16 @@ export async function ask(history: ChatTurn[], subs: Subs, deps: ToolDeps): Prom
 /** Versão em streaming: devolve um ReadableStream de texto (os deltas da resposta
  *  do modelo). O loop de tool-use roda por dentro; deltas de texto de qualquer
  *  turno são encaminhados na hora. Mesma segurança (tenant nas deps, nunca no modelo). */
-export function askStream(history: ChatTurn[], subs: Subs, deps: ToolDeps): ReadableStream<Uint8Array> {
+export function askStream(
+  history: ChatTurn[],
+  subs: Subs,
+  deps: ToolDeps,
+  onComplete?: (fullText: string) => Promise<void> | void,
+): ReadableStream<Uint8Array> {
   const enc = new TextEncoder()
   const tools = toolsFor(subs)
   const messages: Anthropic.MessageParam[] = history.map((t) => ({ role: t.role, content: t.content }))
+  let full = "" // acumula o texto emitido p/ persistir ao final
 
   return new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -102,11 +108,16 @@ export function askStream(history: ChatTurn[], subs: Subs, deps: ToolDeps): Read
             messages,
           } as unknown as Anthropic.MessageStreamParams)
 
-          stream.on("text", (delta) => controller.enqueue(enc.encode(delta)))
+          stream.on("text", (delta) => {
+            full += delta
+            controller.enqueue(enc.encode(delta))
+          })
           const msg = await stream.finalMessage()
 
           if (msg.stop_reason === "refusal") {
-            controller.enqueue(enc.encode("Não posso responder a isso (política de conteúdo)."))
+            const m = "Não posso responder a isso (política de conteúdo)."
+            full += m
+            controller.enqueue(enc.encode(m))
             break
           }
           messages.push({ role: "assistant", content: msg.content })
@@ -129,6 +140,13 @@ export function askStream(history: ChatTurn[], subs: Subs, deps: ToolDeps): Read
         controller.enqueue(enc.encode(`\n\n[erro: ${e instanceof Error ? e.message : String(e)}]`))
       } finally {
         controller.close()
+        if (onComplete && full.trim()) {
+          try {
+            await onComplete(full)
+          } catch {
+            /* persistência é best-effort; não falha o stream já entregue */
+          }
+        }
       }
     },
   })
