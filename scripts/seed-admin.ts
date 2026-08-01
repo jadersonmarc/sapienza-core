@@ -22,12 +22,17 @@ async function main() {
   }
   const hash = await bcrypt.hash(password, 10)
   const superadmin = flag("superadmin")
+  // Conta de gerência (superadmin) já nasce verificada: não passa por confirmação
+  // de e-mail. Para as demais, mantém null (verificação soft continua valendo).
+  const verifiedAt = superadmin ? sql`now()` : sql`NULL`
 
   const [user] = (await db.execute(sql`
-    INSERT INTO public.users (email, password_hash, is_superadmin)
-    VALUES (${email}, ${hash}, ${superadmin})
+    INSERT INTO public.users (email, password_hash, is_superadmin, email_verified_at)
+    VALUES (${email}, ${hash}, ${superadmin}, ${verifiedAt})
     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash,
-      is_superadmin = EXCLUDED.is_superadmin, updated_at = now()
+      is_superadmin = EXCLUDED.is_superadmin,
+      email_verified_at = COALESCE(public.users.email_verified_at, EXCLUDED.email_verified_at),
+      updated_at = now()
     RETURNING id
   `)) as unknown as { id: string }[]
   console.log(`user ${email} (${user.id})${superadmin ? " [superadmin]" : ""}`)

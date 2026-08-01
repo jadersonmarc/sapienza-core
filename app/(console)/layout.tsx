@@ -29,7 +29,8 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
         email_verified_at: string | null
       }[])
     : []
-  const emailVerified = meRows[0]?.email_verified_at != null
+  // Superadmin é conta de gerência da ferramenta: não exige verificação de e-mail.
+  const emailVerified = user.isSuperadmin || meRows[0]?.email_verified_at != null
 
   const entries: NavEntry[] = [
     { href: "/", label: "Início", exact: true },

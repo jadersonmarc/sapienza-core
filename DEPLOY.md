@@ -273,8 +273,10 @@ container do core (Coolify → core → Terminal):
 
 ```bash
 # 1. superadmin da Sapienza (só na primeira vez). O `--` é do pnpm: sem ele os
-#    argumentos não chegam ao script.
-pnpm db:seed -- --email voce@sapienza.com --password '<senha forte>' --superadmin
+#    argumentos não chegam ao script. Use a conta de gerência da ferramenta:
+#    admin@sapienza.com. Superadmin já nasce com e-mail verificado (é conta de
+#    plataforma, não passa por confirmação).
+pnpm db:seed -- --email admin@sapienza.com --password '<senha forte>' --superadmin
 
 # 2. tenant do cliente + usuário owner (--tenant é o NOME; o slug é derivado dele)
 pnpm db:seed -- --email cliente@empresa.com --password '<senha forte>' \
