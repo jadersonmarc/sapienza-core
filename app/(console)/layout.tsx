@@ -33,6 +33,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
 
   const entries: NavEntry[] = [
     { href: "/", label: "Início", exact: true },
+    ...(subscribesMargot || subscribesMotor ? [{ href: "/assistente", label: "Assistente" } as NavEntry] : []),
     ...(subscribesMargot
       ? [
           {

@@ -419,6 +419,7 @@ encontrar um schema à frente do código — por isso backup antes de deploy que
 | `S3_*` | — | — | opcional | só p/ Instagram/Threads |
 | `ASAAS_BASE_URL` / `ASAAS_API_KEY` / `ASAAS_WEBHOOK_TOKEN` | ✅ | — | — | cobrança (produção: `api.asaas.com/v3`) |
 | `RESEND_API_KEY` / `MAIL_FROM` / `CONSOLE_URL` | opcional | — | — | e-mail transacional (sem eles: no-op) |
+| `ANTHROPIC_API_KEY` | opcional | ✅ | ✅ | Claude — assistente de métricas no core; geração/IA no margot+motor (sem ela: assistente/IA off) |
 
 ## Problemas comuns
 
