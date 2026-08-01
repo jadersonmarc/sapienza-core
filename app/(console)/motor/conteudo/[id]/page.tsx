@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getContent, listAnalyses, listProposals, MotorError } from "@/lib/motor/client"
 import type { Analysis, AnalysisType, ContentFormat, ContentStatus, Proposal } from "@/lib/motor/types"
-import { ItemActions } from "./item-actions"
+import { ItemActions, RetryPublishButton } from "./item-actions"
 import { DeleteButton } from "./delete-button"
 import { ContentEditor } from "./content-editor"
 import { ProposalsPanel } from "./proposals-panel"
@@ -112,9 +112,10 @@ export default async function ContentDetailPage({
         </div>
 
         {item.publish_error && (
-          <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
             Falha na última publicação: {item.publish_error}
-          </p>
+            {item.status === "published" && <RetryPublishButton id={item.id} />}
+          </div>
         )}
 
         {item.generating && (

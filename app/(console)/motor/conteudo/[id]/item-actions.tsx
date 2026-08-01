@@ -5,6 +5,7 @@ import {
   transitionAction,
   regenerateAction,
   publishAction,
+  republishAction,
   rejectAction,
   type ActionState,
 } from "../../actions"
@@ -57,6 +58,25 @@ function PublishButton({ id, label = "Publicar agora" }: { id: string; label?: s
         className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
         {pending ? "Publicando…" : label}
+      </button>
+      {state.message && <span className="text-xs text-primary">{state.message}</span>}
+      {state.error && <span className="text-xs text-destructive">{state.error}</span>}
+    </form>
+  )
+}
+
+/** Reprocessa só os canais que falharam (peça já publicada). Aparece no aviso de erro. */
+export function RetryPublishButton({ id }: { id: string }) {
+  const [state, action, pending] = useActionState(republishAction, initial)
+  return (
+    <form action={action} className="mt-2 inline-flex flex-col gap-1">
+      <input type="hidden" name="id" value={id} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-lg border border-destructive/50 px-3 py-1.5 text-sm font-medium hover:bg-destructive/10 disabled:opacity-50"
+      >
+        {pending ? "Reprocessando…" : "Tentar novamente nos canais que falharam"}
       </button>
       {state.message && <span className="text-xs text-primary">{state.message}</span>}
       {state.error && <span className="text-xs text-destructive">{state.error}</span>}

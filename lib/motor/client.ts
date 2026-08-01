@@ -252,6 +252,12 @@ export async function publishContent(
   return call<{ async?: boolean }>(ctx, `/api/v1/content/${id}/publish`, { method: "POST", body: JSON.stringify({}) })
 }
 
+// Reprocessa só os canais que falharam numa publicação anterior (peça já
+// publicada). 202 async, como o publish; resultado/erro aparece em publish_error.
+export async function republishContent(ctx: MotorCtx, id: string): Promise<{ async?: boolean }> {
+  return call<{ async?: boolean }>(ctx, `/api/v1/content/${id}/republish`, { method: "POST", body: "{}" })
+}
+
 export async function getChannels(ctx: MotorCtx): Promise<ChannelsStatus> {
   return call<ChannelsStatus>(ctx, "/api/v1/channels")
 }

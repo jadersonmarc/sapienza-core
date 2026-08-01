@@ -12,6 +12,7 @@ import {
   transitionContent,
   regenerateContent,
   publishContent,
+  republishContent,
   connectChannel,
   disconnectChannel,
   saveEditorConfig,
@@ -201,6 +202,20 @@ export async function publishAction(_prev: ActionState, formData: FormData): Pro
     return { ok: true, message: "Publicação iniciada — atualize a página em instantes para ver o resultado." }
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao publicar" }
+  }
+}
+
+export async function republishAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  try {
+    const ctx = await motorContext()
+    const id = String(formData.get("id") ?? "")
+    if (!id) return { error: "peça inválida" }
+    await republishContent(ctx, id)
+    revalidatePath(`/motor/conteudo/${id}`)
+    // Reprocesso roda em segundo plano; o resultado aparece em publish_error.
+    return { ok: true, message: "Reprocesso iniciado — atualize em instantes para ver o resultado." }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao reprocessar" }
   }
 }
 
