@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
-import { motorContext, listContent, getContentStats, MotorError, type MotorStats } from "@/lib/motor/client"
+import { motorContext, listContent, getContentStats, getGrowth, MotorError, type MotorStats, type ChannelGrowth } from "@/lib/motor/client"
 import { motorMonthlyBilling, motorInvoiceHistory, currentPeriod } from "@/lib/motor/report"
 import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import type { ContentItem, ContentStatus } from "@/lib/motor/types"
@@ -47,6 +47,13 @@ export default async function RelatorioPage() {
     stats = await getContentStats(ctx)
   } catch {
     stats = null // desempenho é best-effort; a coleta pode ainda não ter rodado
+  }
+
+  let growth: ChannelGrowth[] = []
+  try {
+    growth = (await getGrowth(ctx)).growth
+  } catch {
+    growth = [] // crescimento de conta é best-effort (depende da coleta)
   }
 
   const byStatus = items.reduce<Record<string, number>>((acc, it) => {
@@ -198,6 +205,28 @@ export default async function RelatorioPage() {
           </>
         )}
       </div>
+
+      {growth.some((g) => g.followersEnd > 0) && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-muted-foreground">Crescimento de seguidores (mês)</h2>
+          <div className="flex flex-wrap gap-2">
+            {growth
+              .filter((g) => g.followersEnd > 0)
+              .map((g) => (
+                <span key={g.platform} className="rounded-lg border border-border px-3 py-1.5 text-xs">
+                  {g.platform}: <span className="font-mono">{g.followersEnd.toLocaleString("pt-BR")}</span> seguidores
+                  {g.delta !== 0 && (
+                    <span className={g.delta > 0 ? "text-emerald-600" : "text-destructive"}>
+                      {" "}
+                      ({g.delta > 0 ? "+" : ""}
+                      {g.delta.toLocaleString("pt-BR")})
+                    </span>
+                  )}
+                </span>
+              ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

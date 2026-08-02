@@ -11,6 +11,7 @@ export type ToolDeps = {
   editoraStats: (period?: string) => Promise<unknown>
   editoraTopPosts: (period?: string, limit?: number) => Promise<unknown>
   editoraByConfig: (period?: string) => Promise<unknown>
+  editoraGrowth: (period?: string) => Promise<unknown>
   atendenteStats: (period?: string) => Promise<unknown>
 }
 
@@ -45,6 +46,15 @@ const EDITORA_BY_CONFIG: Anthropic.Tool = {
   input_schema: { type: "object", properties: { ...PERIOD_PROP }, additionalProperties: false },
 }
 
+const EDITORA_GROWTH: Anthropic.Tool = {
+  name: "editora_growth",
+  description:
+    "Crescimento de CONTA por canal social (Margot Editora): série diária de seguidores e alcance de " +
+    "conta e a variação (delta) de seguidores no período. Use para 'meus seguidores cresceram?', " +
+    "'quanto ganhei de seguidor no mês?'. É métrica de conta, não de post.",
+  input_schema: { type: "object", properties: { ...PERIOD_PROP }, additionalProperties: false },
+}
+
 const ATENDENTE_STATS: Anthropic.Tool = {
   name: "atendente_stats",
   description:
@@ -56,7 +66,7 @@ const ATENDENTE_STATS: Anthropic.Tool = {
 /** Monta o array de tools só com os produtos que o tenant assina. */
 export function toolsFor(subs: Subs): Anthropic.Tool[] {
   const tools: Anthropic.Tool[] = []
-  if (subs.motor) tools.push(EDITORA_STATS, EDITORA_TOP_POSTS, EDITORA_BY_CONFIG)
+  if (subs.motor) tools.push(EDITORA_STATS, EDITORA_TOP_POSTS, EDITORA_BY_CONFIG, EDITORA_GROWTH)
   if (subs.margot) tools.push(ATENDENTE_STATS)
   return tools
 }
@@ -81,6 +91,9 @@ export async function runTool(name: string, input: unknown, subs: Subs, deps: To
     case "editora_by_config":
       if (!subs.motor) return { error: "tenant não assina a Margot Editora" }
       return deps.editoraByConfig(period)
+    case "editora_growth":
+      if (!subs.motor) return { error: "tenant não assina a Margot Editora" }
+      return deps.editoraGrowth(period)
     case "atendente_stats":
       if (!subs.margot) return { error: "tenant não assina a Margot Atendente" }
       return deps.atendenteStats(period)

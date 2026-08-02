@@ -304,6 +304,20 @@ export async function getByConfig(ctx: MotorCtx, period?: string): Promise<{ per
   return call(ctx, `/api/v1/content/stats/by-config${q}`)
 }
 
+// Crescimento de conta (seguidores/alcance) — série diária + variação por canal.
+export type ChannelGrowth = {
+  platform: string
+  series: { day: string; followers: number; reach: number }[]
+  followersStart: number
+  followersEnd: number
+  delta: number
+}
+
+export async function getGrowth(ctx: MotorCtx, period?: string): Promise<{ period: string; growth: ChannelGrowth[] }> {
+  const q = period && /^\d{4}-\d{2}$/.test(period) ? `?period=${period}` : ""
+  return call(ctx, `/api/v1/content/stats/growth${q}`)
+}
+
 /** Gera a imagem on-brand da peça no formato do canal e a persiste. */
 export async function generatePieceImage(ctx: MotorCtx, id: string): Promise<{ image_url: string }> {
   return call<{ image_url: string }>(ctx, `/api/v1/content/${id}/image`, { method: "POST", body: "{}" })
