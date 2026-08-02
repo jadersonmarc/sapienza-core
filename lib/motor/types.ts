@@ -113,6 +113,7 @@ export type EditorConfig = {
   enabled: boolean
   cadence_days: number
   handle: string // @marca no rodapé das peças de motion (vazio = default)
+  logo_url: string // URL https do logo no rodapé das peças de motion (vazio = monograma)
 }
 
 export type SetupStatus = {

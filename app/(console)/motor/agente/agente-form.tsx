@@ -80,6 +80,24 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
       </div>
 
       <div className="space-y-1">
+        <label className={label} htmlFor="logo_url">
+          Logo da marca (peças de motion)
+        </label>
+        <input
+          id="logo_url"
+          name="logo_url"
+          type="url"
+          defaultValue={cfg.logo_url}
+          placeholder="https://…/logo.png"
+          className={field}
+        />
+        <p className="text-xs text-muted-foreground">
+          URL https de uma imagem pública (ex.: da biblioteca de mídia). Aparece no rodapé dos vídeos.
+          Vazio = inicial da marca.
+        </p>
+      </div>
+
+      <div className="space-y-1">
         <label className={label} htmlFor="themes">
           Temas / áreas a priorizar
         </label>

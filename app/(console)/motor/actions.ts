@@ -281,6 +281,7 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       enabled: formData.get("enabled") === "on",
       cadence_days: Number.isFinite(cadence) ? cadence : 7,
       handle: String(formData.get("handle") ?? "").trim(),
+      logo_url: String(formData.get("logo_url") ?? "").trim(),
     })
     revalidatePath("/motor/agente")
     revalidatePath("/motor")
