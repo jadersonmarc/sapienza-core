@@ -142,13 +142,30 @@ export default async function ContentDetailPage({
               )}
             </div>
             {item.render_status === "done" && item.video_url ? (
-              <video
-                src={item.video_url}
-                controls
-                loop
-                playsInline
-                className="w-full max-w-xs rounded-xl border border-border"
-              />
+              <>
+                <video
+                  src={item.video_url}
+                  controls
+                  loop
+                  playsInline
+                  className="w-full max-w-xs rounded-xl border border-border"
+                />
+                {item.video_urls && Object.keys(item.video_urls).length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="text-muted-foreground">Baixar:</span>
+                    {Object.entries(item.video_urls).map(([aspect, url]) => (
+                      <a
+                        key={aspect}
+                        href={url}
+                        download
+                        className="rounded border border-border px-2 py-1 hover:bg-muted"
+                      >
+                        {aspect}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </>
             ) : item.render_status === "error" ? (
               <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
                 Falha ao renderizar o vídeo: {item.render_error ?? "erro desconhecido"}.

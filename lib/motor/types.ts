@@ -28,6 +28,7 @@ export type ContentItem = {
   motion_preset: string | null
   motion_aspect: string | null
   video_url: string | null
+  video_urls: Record<string, string> | null // fan-out: todos os formatos (aspecto→URL)
   render_status: string | null
   render_error: string | null
   title?: string | null
