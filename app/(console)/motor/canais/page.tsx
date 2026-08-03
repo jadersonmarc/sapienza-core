@@ -6,8 +6,16 @@ import type { ChannelsStatus, SetupStatus } from "@/lib/motor/types"
 import { ConnectForm } from "./connect-form"
 import { ChannelCard } from "./channel-card"
 
-export default async function CanaisPage() {
+const OAUTH_MSG: Record<string, { ok: boolean; text: string }> = {
+  ok: { ok: true, text: "Canal conectado via OAuth — a Sapienza renova o token sozinha." },
+  falha: { ok: false, text: "Não foi possível concluir a conexão via OAuth. Tente de novo." },
+  erro: { ok: false, text: "Falha na autorização (sessão/estado inválido). Tente de novo." },
+  indisponivel: { ok: false, text: "Conexão via OAuth indisponível agora — use o modo manual." },
+}
+
+export default async function CanaisPage({ searchParams }: { searchParams: Promise<{ oauth?: string }> }) {
   const ctx = await motorContext()
+  const oauth = OAUTH_MSG[(await searchParams).oauth ?? ""]
 
   let channels: ChannelsStatus | null = null
   let setup: SetupStatus | null = null
@@ -36,6 +44,16 @@ export default async function CanaisPage() {
           </p>
         )}
       </div>
+
+      {oauth && (
+        <div
+          className={`rounded-lg border px-4 py-3 text-sm ${
+            oauth.ok ? "border-primary/40 bg-primary/10 text-foreground" : "border-destructive/40 bg-destructive/10 text-destructive"
+          }`}
+        >
+          {oauth.text}
+        </div>
+      )}
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>

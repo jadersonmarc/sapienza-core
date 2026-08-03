@@ -262,6 +262,26 @@ export async function getChannels(ctx: MotorCtx): Promise<ChannelsStatus> {
   return call<ChannelsStatus>(ctx, "/api/v1/channels")
 }
 
+// OAuth de canal (o cliente conecta uma vez; o motor renova o token sozinho).
+// getChannelOAuthUrl devolve null quando o app OAuth não está configurado (409) —
+// o console então mostra só o colar-JSON manual (seam).
+export async function getChannelOAuthUrl(ctx: MotorCtx, platform: string, state: string): Promise<string | null> {
+  try {
+    const r = await call<{ url: string }>(
+      ctx,
+      `/api/v1/channels/oauth?platform=${encodeURIComponent(platform)}&state=${encodeURIComponent(state)}`,
+    )
+    return r.url
+  } catch (e) {
+    if (e instanceof MotorError && e.status === 409) return null // não configurado
+    throw e
+  }
+}
+
+export async function exchangeChannelOAuth(ctx: MotorCtx, platform: string, code: string): Promise<void> {
+  await call(ctx, "/api/v1/channels/oauth", { method: "POST", body: JSON.stringify({ platform, code }) })
+}
+
 // Desempenho das peças — série temporal diária + totais + quebra por pilar.
 export type MotorStats = {
   period: string
