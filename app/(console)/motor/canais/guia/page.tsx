@@ -10,7 +10,9 @@ type Canal = {
   nome: string
   campos: string[]
   preReq: string
-  permissoes?: string
+  permissoes?: string // escopos p/ PUBLICAR
+  permissoesMetricas?: string // escopos p/ COLETAR MÉTRICAS (insights) — Bloco D
+  validade?: string // longevidade/expiração do token
   onde: string[]
   json: string
   nota?: string
@@ -24,8 +26,10 @@ const CANAIS: Canal[] = [
     preReq:
       "Conta do Instagram Profissional (Business) vinculada a uma Página do Facebook + um app no Meta for Developers com a Instagram Graph API.",
     permissoes: "instagram_basic, instagram_content_publish, pages_show_list, pages_read_engagement",
+    permissoesMetricas: "instagram_manage_insights (impressões/alcance/curtidas/salvos por post + seguidores da conta)",
+    validade: "Use um Page Access Token de LONGA duração (derivado de um user token de longa duração, ~60 dias). Token curto/expirado quebra publicação E métricas — renove antes de expirar.",
     onde: [
-      "access_token — gere um Token de Página (Page Access Token) de LONGA duração, com as permissões acima (Graph API Explorer ou seu fluxo OAuth).",
+      "access_token — gere um Token de Página (Page Access Token) de LONGA duração, com as permissões acima (Graph API Explorer ou seu fluxo OAuth). Inclua instagram_manage_insights para as métricas.",
       "account_id — chame GET /{id-da-página}?fields=instagram_business_account. O id retornado é o account_id (ID da conta Instagram Business).",
     ],
     json: '{ "access_token": "EAAG…", "account_id": "17841400000000000" }',
@@ -40,8 +44,10 @@ const CANAIS: Canal[] = [
     campos: ["access_token", "page_id"],
     preReq: "Uma Página do Facebook + um app no Meta for Developers com a Pages API.",
     permissoes: "pages_manage_posts, pages_read_engagement, pages_show_list",
+    permissoesMetricas: "read_insights (impressões/alcance do post); curtidas/comentários/compartilhamentos e fan_count já vêm com pages_read_engagement",
+    validade: "Page Access Token de LONGA duração (derivado de user token de longa duração, ~60 dias). Renove antes de expirar — token curto quebra publicação e métricas.",
     onde: [
-      "access_token — Token de Página (Page Access Token) de longa duração com as permissões acima.",
+      "access_token — Token de Página (Page Access Token) de longa duração com as permissões acima (inclua read_insights para as métricas).",
       "page_id — o ID numérico da Página (em Configurações da Página → Sobre → ID da Página, ou GET /me/accounts).",
     ],
     json: '{ "access_token": "EAAG…", "page_id": "123456789012345" }',
@@ -53,6 +59,8 @@ const CANAIS: Canal[] = [
     preReq:
       "Um app no LinkedIn Developers com o produto 'Share on LinkedIn'. Basta o access_token — o autor (seu perfil) é resolvido automaticamente pelo token.",
     permissoes: "escopos w_member_social + openid + profile",
+    permissoesMetricas: "não há métrica por post para perfil pessoal na API do LinkedIn (limitação da plataforma, não é falha) — publicação funciona; métricas ficam indisponíveis para este canal.",
+    validade: "access_token OAuth 2.0 expira em ~60 dias. Renove antes de expirar (com refresh_token, se o seu app tiver acesso a ele).",
     onde: [
       "access_token — token OAuth 2.0 do membro com os escopos acima. Pode colar só o token (sem JSON).",
     ],
@@ -138,8 +146,20 @@ function CanalCard({ c }: { c: Canal }) {
       </p>
       {c.permissoes && (
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">Permissões: </span>
+          <span className="font-medium text-foreground">Permissões (publicar): </span>
           <span className="font-mono text-xs">{c.permissoes}</span>
+        </p>
+      )}
+      {c.permissoesMetricas && (
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Permissões (métricas): </span>
+          <span className="font-mono text-xs">{c.permissoesMetricas}</span>
+        </p>
+      )}
+      {c.validade && (
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Validade do token: </span>
+          {c.validade}
         </p>
       )}
 
@@ -190,6 +210,23 @@ export default function GuiaCanaisPage() {
           cifradas por tenant — ninguém as vê em texto depois de salvas.
         </p>
       </div>
+
+      <section className="rounded-xl border border-primary/40 bg-primary/5 p-5">
+        <h2 className="font-display text-lg font-semibold text-foreground">O token precisa servir a duas coisas</h2>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          O mesmo token do canal é usado para <span className="font-medium text-foreground">publicar</span> e para{" "}
+          <span className="font-medium text-foreground">coletar as métricas</span> (desempenho dos posts e crescimento
+          de seguidores). Um token que só tem a permissão de publicar funciona para postar, mas deixa as{" "}
+          <span className="font-medium text-foreground">métricas vazias sem avisar</span> — e aí o Relatório e o
+          Assistente ficam sem dados. Ao gerar o token, inclua <span className="font-medium text-foreground">as
+          permissões de publicação E de métricas</span> listadas em cada canal abaixo.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Os tokens do Meta e do LinkedIn <span className="font-medium text-foreground">expiram (~60 dias)</span>.
+          Prefira sempre o token de <span className="font-medium text-foreground">longa duração</span>. Hoje a
+          renovação é manual; em breve a Sapienza passa a renovar automaticamente após a primeira conexão.
+        </p>
+      </section>
 
       <div className="grid gap-4">
         {CANAIS.map((c) => (
