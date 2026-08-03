@@ -49,10 +49,13 @@ export async function createMotionAction(_prev: ActionState, formData: FormData)
   const prompt = String(formData.get("prompt") ?? "").trim()
   if (!prompt) return { error: "descreva o tema da peça em movimento" }
   const channel = String(formData.get("channel") ?? "instagram") === "linkedin" ? "linkedin" : "instagram"
+  // Preferências opcionais ("" = automático → não envia; o motor valida).
+  const archetype = String(formData.get("archetype") ?? "").trim() || undefined
+  const audio = String(formData.get("audio") ?? "").trim() || undefined
   let id: string
   try {
     const ctx = await motorContext()
-    const created = await createMotion(ctx, prompt, channel)
+    const created = await createMotion(ctx, prompt, channel, { archetype, audio })
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça de motion" }

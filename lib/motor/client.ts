@@ -190,11 +190,12 @@ export async function createMotion(
   ctx: MotorCtx,
   prompt: string,
   channel: "instagram" | "linkedin" = "instagram",
+  opts: { archetype?: string; audio?: string } = {},
 ): Promise<{ id: string; slug: string }> {
   return call<{ id: string; slug: string }>(
     ctx,
     "/api/v1/content/motion",
-    { method: "POST", body: JSON.stringify({ prompt, channel }) },
+    { method: "POST", body: JSON.stringify({ prompt, channel, ...opts }) },
     { timeoutMs: AI_TIMEOUT_MS },
   )
 }

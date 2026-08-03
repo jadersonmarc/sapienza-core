@@ -23,13 +23,36 @@ export function MotionForm() {
         placeholder="Tema da peça (ex.: convite para o webinar de automação)…"
         className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
       />
-      <label className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Canal:</span>
-        <select name="channel" defaultValue="instagram" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
-          <option value="instagram">Instagram</option>
-          <option value="linkedin">LinkedIn</option>
-        </select>
-      </label>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Canal:</span>
+          <select name="channel" defaultValue="instagram" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="instagram">Instagram</option>
+            <option value="linkedin">LinkedIn</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Estilo:</span>
+          <select name="archetype" defaultValue="" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="">Automático</option>
+            <option value="highlight">Destaque</option>
+            <option value="list">Lista / passos</option>
+            <option value="myth_fact">Mito × verdade</option>
+            <option value="before_after">Antes / depois</option>
+            <option value="qa">Pergunta → resposta</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Trilha:</span>
+          <select name="audio" defaultValue="" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="">Automático</option>
+            <option value="none">Sem trilha</option>
+            <option value="calm">Sóbria</option>
+            <option value="upbeat">Dinâmica</option>
+            <option value="bold">Impactante</option>
+          </select>
+        </label>
+      </div>
       <div className="flex items-center gap-3">
         <button
           type="submit"

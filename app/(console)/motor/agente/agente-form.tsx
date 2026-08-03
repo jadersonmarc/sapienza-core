@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useState } from "react"
 import { saveEditorConfigAction, type ActionState } from "../actions"
 import type { ContentFormat, EditorConfig } from "@/lib/motor/types"
 
@@ -25,6 +25,25 @@ const MODELOS = [
 
 export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: ContentFormat[] }) {
   const [state, action, pending] = useActionState(saveEditorConfigAction, initial)
+  // Logo: campo controlado para o upload preencher a URL (o save grava logo_url).
+  const [logoUrl, setLogoUrl] = useState(cfg.logo_url)
+  const [uploading, setUploading] = useState<null | "ok" | "erro" | "enviando">(null)
+
+  async function uploadLogo(file: File) {
+    setUploading("enviando")
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("folder", "logo")
+      const res = await fetch("/motor/midia/api/upload", { method: "POST", body: fd })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (!res.ok || !data.url) throw new Error(data.error ?? "falha")
+      setLogoUrl(data.url)
+      setUploading("ok")
+    } catch {
+      setUploading("erro")
+    }
+  }
   // Formato padrão só entre os canais conectados. Default = o configurado, se ainda
   // conectado; senão o primeiro disponível.
   const defaultFormat = formats.includes(cfg.format) ? cfg.format : (formats[0] ?? "blog")
@@ -83,17 +102,32 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
         <label className={label} htmlFor="logo_url">
           Logo da marca (peças de motion)
         </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => e.target.files?.[0] && uploadLogo(e.target.files[0])}
+            className="text-sm"
+          />
+          {uploading === "enviando" && <span className="text-xs text-muted-foreground">enviando…</span>}
+          {uploading === "ok" && <span className="text-xs text-primary">logo enviado</span>}
+          {uploading === "erro" && <span className="text-xs text-destructive">falha no upload</span>}
+          {logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={logoUrl} alt="logo" className="h-8 w-auto rounded border border-border" />
+          )}
+        </div>
         <input
           id="logo_url"
           name="logo_url"
           type="url"
-          defaultValue={cfg.logo_url}
+          value={logoUrl}
+          onChange={(e) => setLogoUrl(e.target.value)}
           placeholder="https://…/logo.png"
           className={field}
         />
         <p className="text-xs text-muted-foreground">
-          URL https de uma imagem pública (ex.: da biblioteca de mídia). Aparece no rodapé dos vídeos.
-          Vazio = inicial da marca.
+          Envie uma imagem (acima) ou cole uma URL https. Aparece no rodapé dos vídeos. Vazio = inicial da marca.
         </p>
       </div>
 
