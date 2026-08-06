@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest"
 import postgres from "postgres"
-import { readFileSync } from "node:fs"
+import { readdirSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 
 // Testa o trigger de agregação (UsageRecorded -> usage_counters) exercitando o
@@ -21,7 +21,7 @@ maybe("agregação de uso (control plane)", () => {
     raw = postgres(dsn!, { prepare: false, max: 1 })
     await raw.unsafe(`DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;
                       DROP SCHEMA IF EXISTS bus CASCADE;`)
-    for (const f of ["0000_control_plane.sql", "0001_product_rules_usage_agg.sql"]) {
+    for (const f of readdirSync(join(process.cwd(), "drizzle")).filter((f) => f.endsWith(".sql")).sort()) {
       await raw.unsafe(readFileSync(join(process.cwd(), "drizzle", f), "utf8"))
     }
     ;({ db } = await import("@/lib/db"))

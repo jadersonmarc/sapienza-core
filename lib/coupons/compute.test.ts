@@ -7,7 +7,7 @@ function coupon(partial: Partial<Coupon>): Coupon {
     id: "c1", code: "X", kind: "fixo", value: 0,
     scopeKind: "global", scopeProduto: null, scopeTier: null,
     redeemBy: null, maxRedemptions: null, redemptionCount: 0,
-    durationMonths: null, active: true, ...partial,
+    billingModel: "ambos", active: true, ...partial,
   }
 }
 
@@ -34,21 +34,21 @@ describe("computeDiscount", () => {
 
 describe("couponMatchesTarget", () => {
   it("global casa com qualquer alvo", () => {
-    expect(couponMatchesTarget(coupon({ scopeKind: "global" }), { produto: "combo", tier: "pro" })).toBe(true)
-    expect(couponMatchesTarget(coupon({ scopeKind: "global" }), { produto: "margot", tier: "start" })).toBe(true)
+    expect(couponMatchesTarget(coupon({ scopeKind: "global" }), { produto: "combo", tier: "pro", model: "anual" })).toBe(true)
+    expect(couponMatchesTarget(coupon({ scopeKind: "global" }), { produto: "margot", tier: "start", model: "anual" })).toBe(true)
   })
   it("combo casa só com o combo do mesmo tier", () => {
     const c = coupon({ scopeKind: "combo", scopeTier: "pro" })
-    expect(couponMatchesTarget(c, { produto: "combo", tier: "pro" })).toBe(true)
-    expect(couponMatchesTarget(c, { produto: "combo", tier: "start" })).toBe(false)
-    expect(couponMatchesTarget(c, { produto: "margot", tier: "pro" })).toBe(false)
+    expect(couponMatchesTarget(c, { produto: "combo", tier: "pro", model: "anual" })).toBe(true)
+    expect(couponMatchesTarget(c, { produto: "combo", tier: "start", model: "anual" })).toBe(false)
+    expect(couponMatchesTarget(c, { produto: "margot", tier: "pro", model: "anual" })).toBe(false)
   })
   it("produto casa só com o produto+tier exatos", () => {
     const c = coupon({ scopeKind: "produto", scopeProduto: "margot", scopeTier: "pro" })
-    expect(couponMatchesTarget(c, { produto: "margot", tier: "pro" })).toBe(true)
-    expect(couponMatchesTarget(c, { produto: "motor", tier: "pro" })).toBe(false)
-    expect(couponMatchesTarget(c, { produto: "margot", tier: "start" })).toBe(false)
-    expect(couponMatchesTarget(c, { produto: "combo", tier: "pro" })).toBe(false)
+    expect(couponMatchesTarget(c, { produto: "margot", tier: "pro", model: "anual" })).toBe(true)
+    expect(couponMatchesTarget(c, { produto: "motor", tier: "pro", model: "anual" })).toBe(false)
+    expect(couponMatchesTarget(c, { produto: "margot", tier: "start", model: "anual" })).toBe(false)
+    expect(couponMatchesTarget(c, { produto: "combo", tier: "pro", model: "anual" })).toBe(false)
   })
 })
 

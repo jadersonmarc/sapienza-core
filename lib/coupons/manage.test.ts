@@ -9,7 +9,7 @@ function input(partial: Partial<CouponInput> = {}): CouponInput {
   return {
     code: "SAPIENZA2026", kind: "fixo", value: 200,
     scopeKind: "combo", scopeProduto: null, scopeTier: "pro",
-    redeemBy: null, maxRedemptions: 1, durationMonths: 12, ...partial,
+    billingModel: "anual", redeemBy: null, maxRedemptions: 1, ...partial,
   }
 }
 
@@ -29,9 +29,11 @@ describe("validateCouponInput (puro)", () => {
     expect(validateCouponInput(input({ scopeKind: "combo", scopeProduto: "margot", scopeTier: "pro" }))).toMatch(/não leva produto/)
     expect(validateCouponInput(input({ scopeKind: "global", scopeTier: "pro" }))).toMatch(/global/)
   })
-  it("recusa limites não-inteiros/≤0", () => {
+  it("recusa limite não-inteiro/≤0", () => {
     expect(validateCouponInput(input({ maxRedemptions: 0 }))).toMatch(/máximo/)
-    expect(validateCouponInput(input({ durationMonths: -1 }))).toMatch(/duração/)
+  })
+  it("recusa cupom fixo exclusivo do mensal", () => {
+    expect(validateCouponInput(input({ kind: "fixo", billingModel: "mensal" }))).toMatch(/fixo/)
   })
 })
 
@@ -67,7 +69,7 @@ maybe("catálogo de cupons — integração", () => {
     const { id } = await mod.createCoupon({
       code: "  sapienza2026 ", kind: "fixo", value: 200,
       scopeKind: "combo", scopeProduto: null, scopeTier: "pro",
-      redeemBy: null, maxRedemptions: 1, durationMonths: 12,
+      billingModel: "anual", redeemBy: null, maxRedemptions: 1,
     })
     const list = await mod.listCoupons()
     expect(list).toHaveLength(1)
@@ -81,14 +83,14 @@ maybe("catálogo de cupons — integração", () => {
   })
 
   it("rejeita código duplicado (case-insensitive)", async () => {
-    const base = { kind: "fixo" as const, value: 100, scopeKind: "combo" as const, scopeProduto: null, scopeTier: "pro", redeemBy: null, maxRedemptions: null, durationMonths: null }
+    const base = { kind: "fixo" as const, value: 100, scopeKind: "combo" as const, scopeProduto: null, scopeTier: "pro", billingModel: "anual" as const, redeemBy: null, maxRedemptions: null }
     await mod.createCoupon({ code: "DUP", ...base })
     await expect(mod.createCoupon({ code: "dup", ...base })).rejects.toBeInstanceOf(mod.CouponManageError)
   })
 
   it("rejeita escopo incoerente antes de tocar no banco", async () => {
     await expect(
-      mod.createCoupon({ code: "BAD", kind: "fixo", value: 50, scopeKind: "combo", scopeProduto: "margot", scopeTier: "pro", redeemBy: null, maxRedemptions: null, durationMonths: null }),
+      mod.createCoupon({ code: "BAD", kind: "fixo", value: 50, scopeKind: "combo", scopeProduto: "margot", scopeTier: "pro", billingModel: "anual", redeemBy: null, maxRedemptions: null }),
     ).rejects.toBeInstanceOf(mod.CouponManageError)
     expect(await mod.listCoupons()).toHaveLength(0)
   })

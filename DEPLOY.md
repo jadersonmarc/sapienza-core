@@ -311,7 +311,7 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 
 | Repo | Secrets | Jobs |
 |---|---|---|
-| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC), `dunning` (diário, 07:00 UTC), `email-dispatch` (5min), `coupon-expiry` (diário, 06:00 UTC) |
+| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC), `dunning` (diário, 07:00 UTC), `email-dispatch` (5min), `reconcile-recurrence` (diário, 06:00 UTC — Degrau 13 + fim do desconto) |
 | `sapienza-motor` | `MOTOR_URL`, `MOTION_URL`, `WEBHOOK_SECRET` | `publish-scheduled` (10min), `close-approval-window` (15min), `provision` (1h), `generate-draft` (seg/qua/sex), `render-motion` (5min) |
 
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
@@ -324,8 +324,9 @@ sem tenants não abriria nem o `/super`. Roda no CMD do container, hands-off.
 
 **Cupons de desconto.** Sobe sozinho no boot: a migration `0010` (`db:migrate`) e o catálogo de
 cupons (`coupons:seed`) rodam no CMD do container antes do `next start` — ambos idempotentes. O
-seed de lançamento traz `NORTEC2026` = R$200 no Combo Pro, 12 meses, 1 uso (para adicionar/editar
-cupons, mexa em `scripts/seed-coupons.ts` e redeploy). O Asaas **não** tem cupom nativo em assinatura — o desconto é calculado no core e
+seed de lançamento traz `NORTEC2026` = R$200 no Combo Pro **anual**, 1 uso (fixo só vale no anual; o
+desconto dura o termo de 12 meses e cai na renovação via o cron `reconcile-recurrence`). Para
+adicionar/editar cupons, mexa em `scripts/seed-coupons.ts` e redeploy. O Asaas **não** tem cupom nativo em assinatura — o desconto é calculado no core e
 a recorrência recebe o valor **já líquido**; o cron `coupon-expiry` devolve a recorrência ao preço de
 tabela quando o desconto vence. Concessões fora do checkout: superadmin aplica/revoga em `/super`.
 
