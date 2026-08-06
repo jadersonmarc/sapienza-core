@@ -16,6 +16,7 @@ import {
   uniqueIndex,
   primaryKey,
 } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
 // ── Control plane: schema `public`. O sapienza-core é o ÚNICO que escreve aqui.
 // Produtos (data planes) só LEEM estas tabelas via kit. Ver SPEC.md / AGENTS.md.
@@ -234,3 +235,44 @@ export const assistantMessages = pgTable("assistant_messages", {
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index("assistant_messages_conv_idx").on(t.conversationId, t.createdAt)])
+
+// ── coupons (cupom de desconto; o Asaas recebe o valor JÁ líquido) ────────────
+// O cupom altera SÓ o preço — plano, hard caps de IA e limites de assento seguem
+// os do plano. Código único case-insensitive (upper). Escopo global|produto|combo.
+export const coupons = pgTable("coupons", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  code: text("code").notNull(), // normalizado em MAIÚSCULAS
+  kind: text("kind").notNull(), // 'percentual' | 'fixo'
+  value: numeric("value", { precision: 12, scale: 2 }).notNull(), // % ou BRL
+  scopeKind: text("scope_kind").notNull(), // 'global' | 'produto' | 'combo'
+  scopeProduto: produtoEnum("scope_produto"),
+  scopeTier: text("scope_tier"),
+  redeemBy: date("redeem_by"), // data limite p/ resgate (null = sem limite)
+  maxRedemptions: integer("max_redemptions"), // null = ilimitado
+  redemptionCount: integer("redemption_count").notNull().default(0),
+  durationMonths: integer("duration_months"), // null = enquanto a assinatura viver
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [uniqueIndex("coupons_code_idx").on(sql`upper(${t.code})`)])
+
+// ── coupon_redemptions (um por assinatura/recorrência; atribuição + expiração) ─
+export const couponRedemptions = pgTable("coupon_redemptions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  couponId: uuid("coupon_id").notNull().references(() => coupons.id, { onDelete: "restrict" }),
+  tenantId: uuid("tenant_id").notNull().references(() => tenants.id, { onDelete: "cascade" }),
+  providerSubId: text("provider_sub_id"), // recorrência Asaas descontada
+  produto: text("produto").notNull(), // 'margot' | 'motor' | 'combo'
+  tier: text("tier").notNull(),
+  baseValue: numeric("base_value", { precision: 12, scale: 2 }).notNull(),
+  discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull(),
+  netValue: numeric("net_value", { precision: 12, scale: 2 }).notNull(),
+  startsOn: date("starts_on").notNull(),
+  endsOn: date("ends_on"), // null = enquanto a assinatura viver
+  status: text("status").notNull().default("active"), // 'active' | 'expired' | 'revoked'
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+}, (t) => [
+  index("coupon_redemptions_coupon_idx").on(t.couponId),
+  index("coupon_redemptions_tenant_idx").on(t.tenantId),
+])
