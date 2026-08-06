@@ -25,8 +25,23 @@ function checks(pw: string) {
 // Campos controlados por state: o React 19 reseta o <form> após a action, então
 // sem isso o cliente perderia tudo (cartão/endereço) num erro de pagamento. Os
 // dados do cartão ficam só no cliente (não trafegam de volta pelo servidor).
-export function CadastroForm({ produto, tier }: { produto: string; tier: string }) {
+function brl(n: number): string {
+  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+}
+
+export function CadastroForm({
+  produto,
+  tier,
+  precoAnual,
+  precoMensal,
+}: {
+  produto: string
+  tier: string
+  precoAnual: number
+  precoMensal: number
+}) {
   const [state, action, pending] = useActionState(signupAction, initial)
+  const [model, setModel] = useState<"anual" | "mensal">("anual")
   const [f, setF] = useState({
     name: "",
     taxId: "",
@@ -58,10 +73,27 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">Modelo</span>
-        <select name="model" defaultValue="anual" className={field}>
+        <select
+          name="model"
+          value={model}
+          onChange={(e) => setModel(e.target.value === "mensal" ? "mensal" : "anual")}
+          className={field}
+        >
           <option value="anual">Anual — 12 meses, sem taxa de implantação</option>
           <option value="mensal">Mensal — sem fidelidade, com implantação na adesão</option>
         </select>
+        <span className="mt-1 text-xs text-muted-foreground">
+          {model === "anual" ? (
+            <>
+              <strong className="text-foreground">{brl(precoAnual)}/mês</strong> por 12 meses. Sem taxa de implantação.
+            </>
+          ) : (
+            <>
+              <strong className="text-foreground">{brl(precoMensal)}/mês</strong>, sem fidelidade. Implantação de{" "}
+              <strong className="text-foreground">{brl(precoMensal)}</strong> cobrada só na adesão.
+            </>
+          )}
+        </span>
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
