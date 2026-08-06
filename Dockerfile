@@ -27,5 +27,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD node -e "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
-# migrate + pricing:sync são idempotentes; rodam a cada boot antes do start.
-CMD ["sh", "-lc", "pnpm db:migrate && pnpm pricing:sync && pnpm start"]
+# migrate + pricing:sync + coupons:seed são idempotentes; rodam a cada boot antes
+# do start (o seed de cupons não zera contador nem resgates — só garante o catálogo).
+CMD ["sh", "-lc", "pnpm db:migrate && pnpm pricing:sync && pnpm coupons:seed && pnpm start"]

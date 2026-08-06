@@ -317,9 +317,10 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
 `MOTION_URL` = URL pública do serviço de render (§5b), sem barra no fim.
 
-**Cupons de desconto.** A migration `0010` sobe as tabelas no boot (`db:migrate`). Semeie os
-cupons de lançamento com `pnpm coupons:seed` (idempotente; ex.: `NORTEC2026` = R$200 no Combo Pro,
-12 meses, 1 uso). O Asaas **não** tem cupom nativo em assinatura — o desconto é calculado no core e
+**Cupons de desconto.** Sobe sozinho no boot: a migration `0010` (`db:migrate`) e o catálogo de
+cupons (`coupons:seed`) rodam no CMD do container antes do `next start` — ambos idempotentes. O
+seed de lançamento traz `NORTEC2026` = R$200 no Combo Pro, 12 meses, 1 uso (para adicionar/editar
+cupons, mexa em `scripts/seed-coupons.ts` e redeploy). O Asaas **não** tem cupom nativo em assinatura — o desconto é calculado no core e
 a recorrência recebe o valor **já líquido**; o cron `coupon-expiry` devolve a recorrência ao preço de
 tabela quando o desconto vence. Concessões fora do checkout: superadmin aplica/revoga em `/super`.
 
