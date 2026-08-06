@@ -133,8 +133,12 @@ export function CreateCouponForm() {
             <input id="new_max" name="max_redemptions" type="number" min="1" step="1" className={field} placeholder="∞" />
           </div>
           <div className="space-y-1">
-            <label className={label} htmlFor="new_dur">Duração em meses (opcional)</label>
-            <input id="new_dur" name="duration_months" type="number" min="1" step="1" className={field} placeholder="enquanto durar" />
+            <label className={label} htmlFor="new_model">Modelo permitido</label>
+            <select id="new_model" name="billing_model" className={field} defaultValue="ambos">
+              <option value="ambos">Ambos</option>
+              <option value="anual">Só anual</option>
+              <option value="mensal">Só mensal</option>
+            </select>
           </div>
         </div>
 

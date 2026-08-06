@@ -4,7 +4,7 @@ import { paymentProvider } from "@/lib/payments/asaas"
 import { computeDiscount } from "@/lib/coupons/compute"
 import { priceBaseFor, redeemCoupon, refreshRedemptionCount, validateCoupon } from "@/lib/coupons/redeem"
 import type { CouponTarget } from "@/lib/coupons/types"
-import type { ProdutoId } from "@/lib/pricing/load"
+import type { BillingModel, ProdutoId } from "@/lib/pricing/load"
 
 // Concessão de desconto pelo superadmin, SEM passar pelo checkout — a porta do
 // desconto recorrente negociado. Aplica/revoga sobre uma assinatura já existente,
@@ -26,11 +26,11 @@ async function resolveSubscription(
   tenantId: string,
 ): Promise<{ target: CouponTarget; providerSubId: string }> {
   const subs = (await db.execute(sql`
-    SELECT produto, tier, provider_sub_id
+    SELECT produto, tier, billing_model, provider_sub_id
       FROM public.subscriptions
      WHERE tenant_id = ${tenantId}::uuid AND status IN ('active', 'past_due')
      ORDER BY produto
-  `)) as unknown as { produto: string; tier: string; provider_sub_id: string | null }[]
+  `)) as unknown as { produto: string; tier: string; billing_model: string; provider_sub_id: string | null }[]
 
   if (subs.length === 0) throw new AdminCouponError("tenant sem assinatura ativa")
 
@@ -44,9 +44,13 @@ async function resolveSubscription(
   if (tiers.size !== 1) throw new AdminCouponError("assinaturas em planos diferentes — resolva manualmente")
   const tier = subs[0].tier
 
+  const models = new Set(subs.map((s) => s.billing_model))
+  if (models.size !== 1) throw new AdminCouponError("assinaturas em modelos diferentes — resolva manualmente")
+  const model = subs[0].billing_model as BillingModel
+
   const produtos = subs.map((s) => s.produto).sort()
   const isCombo = produtos.length === 2 && produtos[0] === "margot" && produtos[1] === "motor"
-  const target: CouponTarget = { produto: isCombo ? "combo" : (produtos[0] as ProdutoId), tier }
+  const target: CouponTarget = { produto: isCombo ? "combo" : (produtos[0] as ProdutoId), tier, model }
   return { target, providerSubId }
 }
 
@@ -64,7 +68,7 @@ export async function applyCouponToSubscription(args: {
   `)) as unknown as unknown[]
   if (existing.length > 0) throw new AdminCouponError("já há um cupom ativo nesta assinatura")
 
-  const base = await priceBaseFor(target)
+  const base = priceBaseFor(target)
   const { net } = computeDiscount(base, coupon.kind, coupon.value)
 
   const provider = paymentProvider()
@@ -88,18 +92,20 @@ export async function applyCouponToSubscription(args: {
 /** Revoga um resgate ativo: recorrência volta ao preço de tabela e o resgate encerra. */
 export async function revokeCoupon(args: { redemptionId: string }): Promise<void> {
   const rows = (await db.execute(sql`
-    SELECT id, coupon_id, tenant_id, provider_sub_id, produto, tier
+    SELECT id, coupon_id, tenant_id, provider_sub_id, produto, tier, billing_model
       FROM public.coupon_redemptions
      WHERE id = ${args.redemptionId}::uuid AND status = 'active'
   `)) as unknown as {
     id: string; coupon_id: string; tenant_id: string
-    provider_sub_id: string | null; produto: string; tier: string
+    provider_sub_id: string | null; produto: string; tier: string; billing_model: string
   }[]
   const r = rows[0]
   if (!r) throw new AdminCouponError("resgate não encontrado ou já encerrado")
 
-  const target: CouponTarget = { produto: r.produto as ProdutoId | "combo", tier: r.tier }
-  const tablePrice = await priceBaseFor(target)
+  const target: CouponTarget = {
+    produto: r.produto as ProdutoId | "combo", tier: r.tier, model: r.billing_model as BillingModel,
+  }
+  const tablePrice = priceBaseFor(target)
 
   if (r.provider_sub_id) {
     const provider = paymentProvider()

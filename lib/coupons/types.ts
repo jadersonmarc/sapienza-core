@@ -1,11 +1,14 @@
-import type { ProdutoId } from "@/lib/pricing/load"
+import type { BillingModel, ProdutoId } from "@/lib/pricing/load"
 
 // O alvo comercial de um cupom = o que está sendo assinado. Combo é um alvo
-// próprio (não um produto do enum) — margot + motor no mesmo tier.
-export type CouponTarget = { produto: ProdutoId | "combo"; tier: string }
+// próprio (não um produto do enum) — margot + motor no mesmo tier. `model` = o
+// modelo comercial da assinatura (anual|mensal), que a validação exige.
+export type CouponTarget = { produto: ProdutoId | "combo"; tier: string; model: BillingModel }
 
 export type CouponKind = "percentual" | "fixo"
 export type CouponScopeKind = "global" | "produto" | "combo"
+// Modelo(s) em que o cupom pode ser resgatado.
+export type CouponBillingModel = "anual" | "mensal" | "ambos"
 
 // Linha de public.coupons (valores numéricos já convertidos de numeric→number).
 export type Coupon = {
@@ -19,7 +22,8 @@ export type Coupon = {
   redeemBy: string | null // "YYYY-MM-DD"
   maxRedemptions: number | null
   redemptionCount: number
-  durationMonths: number | null
+  // Cupom NÃO tem duração própria — a vigência = o termo da assinatura.
+  billingModel: CouponBillingModel
   active: boolean
 }
 
@@ -30,6 +34,8 @@ export type CouponRejectReason =
   | "expired"
   | "exhausted"
   | "out_of_scope"
+  | "model_not_allowed"
+  | "fixed_requires_annual"
 
 const REASON_MESSAGE: Record<CouponRejectReason, string> = {
   not_found: "Cupom inexistente.",
@@ -37,6 +43,8 @@ const REASON_MESSAGE: Record<CouponRejectReason, string> = {
   expired: "Cupom expirado.",
   exhausted: "Cupom esgotado.",
   out_of_scope: "Cupom não vale para o plano escolhido.",
+  model_not_allowed: "Cupom não vale para este modelo de assinatura.",
+  fixed_requires_annual: "Cupom de valor fixo só vale no plano anual.",
 }
 
 export class CouponError extends Error {

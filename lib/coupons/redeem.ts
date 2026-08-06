@@ -1,12 +1,19 @@
 import { sql } from "drizzle-orm"
 import type { PgTransaction } from "drizzle-orm/pg-core"
 import { db } from "@/lib/db"
-import { comboMensal, type ProdutoId } from "@/lib/pricing/load"
-import { CouponError, type Coupon, type CouponKind, type CouponScopeKind, type CouponTarget } from "@/lib/coupons/types"
+import { comboPreco, precoDe, type ProdutoId } from "@/lib/pricing/load"
+import {
+  CouponError,
+  type Coupon,
+  type CouponBillingModel,
+  type CouponKind,
+  type CouponScopeKind,
+  type CouponTarget,
+} from "@/lib/coupons/types"
 import { computeDiscount, computeEndsOn, couponMatchesTarget, toDateStr } from "@/lib/coupons/compute"
 
-// Operações de banco do cupom. O PREÇO BASE vem SEMPRE do pricing.yaml → plans
-// (nunca do request): avulso lê public.plans; combo lê comboMensal (pricing.yaml).
+// Operações de banco do cupom. O PREÇO BASE vem SEMPRE do pricing.yaml (nunca do
+// request), por MODELO: avulso via precoDe, combo via comboPreco.
 // Só usamos `.execute`; serve tanto `db` quanto uma transação (mesmo padrão do emitEvent).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Executor = { execute: PgTransaction<any, any, any>["execute"] }
@@ -27,19 +34,16 @@ function mapCoupon(r: Record<string, unknown>): Coupon {
     redeemBy: (r.redeem_by as string | null) ?? null,
     maxRedemptions: r.max_redemptions == null ? null : Number(r.max_redemptions),
     redemptionCount: Number(r.redemption_count ?? 0),
-    durationMonths: r.duration_months == null ? null : Number(r.duration_months),
+    billingModel: (String(r.billing_model ?? "ambos")) as CouponBillingModel,
     active: Boolean(r.active),
   }
 }
 
-/** Preço de tabela do alvo — combo via pricing.yaml, avulso via public.plans. */
-export async function priceBaseFor(target: CouponTarget, exec: Executor = db): Promise<number> {
-  if (target.produto === "combo") return comboMensal(target.tier)
-  const rows = (await exec.execute(sql`
-    SELECT mensal FROM public.plans WHERE produto = ${target.produto} AND tier = ${target.tier}
-  `)) as unknown as { mensal: string }[]
-  if (!rows[0]) throw new Error(`plano não encontrado: ${target.produto}/${target.tier}`)
-  return Number(rows[0].mensal)
+/** Preço de tabela do alvo, por MODELO — sempre do pricing.yaml. */
+export function priceBaseFor(target: CouponTarget): number {
+  return target.produto === "combo"
+    ? comboPreco(target.tier, target.model)
+    : precoDe(target.produto, target.tier, target.model)
 }
 
 /** Carrega o cupom pelo código (case-insensitive). null se não existir. */
@@ -76,6 +80,15 @@ export async function validateCoupon(
     throw new CouponError("exhausted")
   }
   if (!couponMatchesTarget(coupon, target)) throw new CouponError("out_of_scope")
+  // Modelo permitido do cupom vs o modelo da assinatura.
+  if (coupon.billingModel !== "ambos" && coupon.billingModel !== target.model) {
+    throw new CouponError("model_not_allowed")
+  }
+  // TRAVA: fixo só no anual — no mensal (termo indefinido) viraria desconto
+  // perpétuo. Validado na APLICAÇÃO, não só na criação do cupom.
+  if (coupon.kind === "fixo" && target.model !== "anual") {
+    throw new CouponError("fixed_requires_annual")
+  }
   return coupon
 }
 
@@ -111,18 +124,20 @@ export async function redeemCoupon(
     throw new CouponError("exhausted")
   }
 
-  const base = await priceBaseFor(target, tx)
+  const base = priceBaseFor(target)
   const { discount, net } = computeDiscount(base, coupon.kind, coupon.value)
   const startsOn = args.startsOn ?? new Date()
   const startsOnStr = toDateStr(startsOn)
-  const endsOn = computeEndsOn(startsOn, coupon.durationMonths)
+  // Vigência = termo da assinatura: anual encerra em 12 meses; mensal é indefinido
+  // (ends_on null → o desconto percentual persiste até cancelar). Sem duração de cupom.
+  const endsOn = target.model === "anual" ? computeEndsOn(startsOn, 12) : null
 
   const ins = (await tx.execute(sql`
     INSERT INTO public.coupon_redemptions
-      (coupon_id, tenant_id, provider_sub_id, produto, tier,
+      (coupon_id, tenant_id, provider_sub_id, produto, tier, billing_model,
        base_value, discount_amount, net_value, starts_on, ends_on)
     VALUES (${coupon.id}::uuid, ${tenantId}::uuid, ${args.providerSubId},
-            ${target.produto}, ${target.tier},
+            ${target.produto}, ${target.tier}, ${target.model},
             ${base}, ${discount}, ${net}, ${startsOnStr}::date,
             ${endsOn == null ? sql`NULL` : sql`${endsOn}::date`})
     RETURNING id

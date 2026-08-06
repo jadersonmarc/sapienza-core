@@ -12,23 +12,24 @@ type CouponSeed = {
   scopeKind: "global" | "produto" | "combo"
   scopeProduto: "margot" | "motor" | null
   scopeTier: string | null
+  billingModel: "anual" | "mensal" | "ambos"
   redeemBy: string | null
   maxRedemptions: number | null
-  durationMonths: number | null
 }
 
 const COUPONS: CouponSeed[] = [
   {
-    // Primeiro cliente pagante: R$200 de desconto no Combo Pro, por 12 meses, 1 uso.
+    // Primeiro cliente pagante: R$200 no Combo Pro ANUAL (fixo só vale no anual),
+    // 1 uso. Sem duração própria — a vigência = o termo (12 meses do anual).
     code: "NORTEC2026",
     kind: "fixo",
     value: 200,
     scopeKind: "combo",
     scopeProduto: null,
     scopeTier: "pro",
+    billingModel: "anual",
     redeemBy: null,
     maxRedemptions: 1,
-    durationMonths: 12,
   },
 ]
 
@@ -44,8 +45,8 @@ async function upsert(c: CouponSeed): Promise<void> {
       UPDATE public.coupons
          SET kind = ${c.kind}, value = ${c.value},
              scope_kind = ${c.scopeKind}, scope_produto = ${c.scopeProduto},
-             scope_tier = ${c.scopeTier}, redeem_by = ${c.redeemBy},
-             max_redemptions = ${c.maxRedemptions}, duration_months = ${c.durationMonths},
+             scope_tier = ${c.scopeTier}, billing_model = ${c.billingModel}, redeem_by = ${c.redeemBy},
+             max_redemptions = ${c.maxRedemptions},
              active = true, updated_at = now()
        WHERE id = ${existing[0].id}::uuid
     `)
@@ -54,9 +55,9 @@ async function upsert(c: CouponSeed): Promise<void> {
   }
   await db.execute(sql`
     INSERT INTO public.coupons
-      (code, kind, value, scope_kind, scope_produto, scope_tier, redeem_by, max_redemptions, duration_months, active)
+      (code, kind, value, scope_kind, scope_produto, scope_tier, billing_model, redeem_by, max_redemptions, active)
     VALUES (${code}, ${c.kind}, ${c.value}, ${c.scopeKind}, ${c.scopeProduto},
-            ${c.scopeTier}, ${c.redeemBy}, ${c.maxRedemptions}, ${c.durationMonths}, true)
+            ${c.scopeTier}, ${c.billingModel}, ${c.redeemBy}, ${c.maxRedemptions}, true)
   `)
   console.log(`cupom ${code} criado`)
 }

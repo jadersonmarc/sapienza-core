@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm"
 import { db } from "@/lib/db"
 import { normalizeCode } from "@/lib/coupons/compute"
 import { loadCouponByCode } from "@/lib/coupons/redeem"
-import type { Coupon, CouponKind, CouponScopeKind } from "@/lib/coupons/types"
+import type { Coupon, CouponBillingModel, CouponKind, CouponScopeKind } from "@/lib/coupons/types"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 // Gerência do CATÁLOGO de cupons (superadmin): listar, criar, ativar/desativar.
@@ -18,6 +18,7 @@ export class CouponManageError extends Error {
 
 const KINDS: CouponKind[] = ["percentual", "fixo"]
 const SCOPES: CouponScopeKind[] = ["global", "produto", "combo"]
+const MODELS: CouponBillingModel[] = ["anual", "mensal", "ambos"]
 const PRODUTOS: ProdutoId[] = ["margot", "motor"]
 const TIERS = ["start", "pro", "scale"]
 
@@ -28,9 +29,9 @@ export type CouponInput = {
   scopeKind: CouponScopeKind
   scopeProduto: ProdutoId | null
   scopeTier: string | null
+  billingModel: CouponBillingModel
   redeemBy: string | null
   maxRedemptions: number | null
-  durationMonths: number | null
 }
 
 /**
@@ -56,11 +57,14 @@ export function validateCouponInput(input: CouponInput): string | null {
     if (!input.scopeTier || !TIERS.includes(input.scopeTier)) return "selecione o plano do combo"
   }
 
+  if (!MODELS.includes(input.billingModel)) return "modelo permitido inválido"
+  // Fixo nunca se aplica no mensal (termo indefinido) — um cupom fixo só-mensal
+  // seria inútil. Exige anual/ambos. A trava por assinatura é revalidada na aplicação.
+  if (input.kind === "fixo" && input.billingModel === "mensal") {
+    return "cupom fixo não pode ser exclusivo do mensal (use anual)"
+  }
   if (input.maxRedemptions != null && !(Number.isInteger(input.maxRedemptions) && input.maxRedemptions > 0)) {
     return "máximo de resgates deve ser um inteiro maior que zero"
-  }
-  if (input.durationMonths != null && !(Number.isInteger(input.durationMonths) && input.durationMonths > 0)) {
-    return "duração deve ser um inteiro de meses maior que zero"
   }
   if (input.redeemBy != null && Number.isNaN(Date.parse(input.redeemBy))) return "data limite inválida"
   return null
@@ -78,7 +82,7 @@ function mapCoupon(r: Record<string, unknown>): Coupon {
     redeemBy: (r.redeem_by as string | null) ?? null,
     maxRedemptions: r.max_redemptions == null ? null : Number(r.max_redemptions),
     redemptionCount: Number(r.redemption_count ?? 0),
-    durationMonths: r.duration_months == null ? null : Number(r.duration_months),
+    billingModel: String(r.billing_model ?? "ambos") as CouponBillingModel,
     active: Boolean(r.active),
   }
 }
@@ -100,11 +104,11 @@ export async function createCoupon(input: CouponInput): Promise<{ id: string }> 
 
   const rows = (await db.execute(sql`
     INSERT INTO public.coupons
-      (code, kind, value, scope_kind, scope_produto, scope_tier, redeem_by, max_redemptions, duration_months, active)
+      (code, kind, value, scope_kind, scope_produto, scope_tier, billing_model, redeem_by, max_redemptions, active)
     VALUES (${code}, ${input.kind}, ${input.value}, ${input.scopeKind},
-            ${input.scopeProduto}, ${input.scopeTier},
+            ${input.scopeProduto}, ${input.scopeTier}, ${input.billingModel},
             ${input.redeemBy == null ? sql`NULL` : sql`${input.redeemBy}::date`},
-            ${input.maxRedemptions}, ${input.durationMonths}, true)
+            ${input.maxRedemptions}, true)
     RETURNING id
   `)) as unknown as { id: string }[]
   return { id: rows[0].id }

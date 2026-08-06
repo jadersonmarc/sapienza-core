@@ -98,7 +98,7 @@ export default async function SuperPage() {
                 <th className="px-4 py-2 font-medium">Escopo</th>
                 <th className="px-4 py-2 font-medium">Validade</th>
                 <th className="px-4 py-2 font-medium">Usos</th>
-                <th className="px-4 py-2 font-medium">Duração</th>
+                <th className="px-4 py-2 font-medium">Modelo</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Ação</th>
               </tr>
@@ -121,7 +121,7 @@ export default async function SuperPage() {
                       {c.redemptionCount}{c.maxRedemptions != null ? `/${c.maxRedemptions}` : " / ∞"}
                     </td>
                     <td className="px-4 py-2 text-xs">
-                      {c.durationMonths != null ? `${c.durationMonths} meses` : "enquanto durar"}
+                      {c.billingModel === "ambos" ? "anual/mensal" : c.billingModel}
                     </td>
                     <td className="px-4 py-2 text-xs">
                       {c.active ? <span className="text-primary">ativo</span> : <span className="text-muted-foreground">inativo</span>}

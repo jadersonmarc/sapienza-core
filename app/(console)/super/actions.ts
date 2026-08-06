@@ -12,7 +12,7 @@ import { SeatError } from "@/lib/billing/seats"
 import { ChannelDowngradeError } from "@/lib/billing/channels-downgrade"
 import { applyCouponToSubscription, revokeCoupon, AdminCouponError } from "@/lib/coupons/admin"
 import { createCoupon, setCouponActive, CouponManageError } from "@/lib/coupons/manage"
-import { CouponError, type CouponKind, type CouponScopeKind } from "@/lib/coupons/types"
+import { CouponError, type CouponBillingModel, type CouponKind, type CouponScopeKind } from "@/lib/coupons/types"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 // Só o superadmin Sapienza cria tenant e ativa assinatura.
@@ -170,9 +170,9 @@ export async function createCouponAction(_prev: CouponCatalogState, formData: Fo
       // Só leva produto no escopo 'produto'; só leva tier em produto/combo.
       scopeProduto: scopeKind === "produto" ? (str("scope_produto") as ProdutoId | null) : null,
       scopeTier: scopeKind === "global" ? null : str("scope_tier"),
+      billingModel: (String(formData.get("billing_model") ?? "ambos")) as CouponBillingModel,
       redeemBy: str("redeem_by"),
       maxRedemptions: num("max_redemptions"),
-      durationMonths: num("duration_months"),
     })
     revalidatePath("/super")
     return { ok: true }
