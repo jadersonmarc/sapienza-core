@@ -9,6 +9,7 @@ import { NewTenantForm } from "./new-tenant-form"
 import { ActivateForm } from "./activate-form"
 import { CancelForm } from "./cancel-form"
 import { AccountActions } from "./account-actions"
+import { ApplyCouponForm, RevokeCouponButton } from "./coupon-form"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -39,6 +40,19 @@ export default async function SuperPage() {
      ORDER BY t.name, s.produto
   `)) as unknown as { tenant_id: string; name: string; produto: string; tier: string; activated_at: string; mensal: string }[]
 
+  // Resgates de cupom ativos (para o superadmin revogar quando quiser).
+  const resgates = (await db.execute(sql`
+    SELECT r.id, t.name, c.code, r.produto, r.tier, r.base_value, r.net_value, r.starts_on, r.ends_on
+      FROM public.coupon_redemptions r
+      JOIN public.tenants t ON t.id = r.tenant_id
+      JOIN public.coupons c ON c.id = r.coupon_id
+     WHERE r.status = 'active'
+     ORDER BY r.created_at DESC
+  `)) as unknown as {
+    id: string; name: string; code: string; produto: string; tier: string
+    base_value: string; net_value: string; starts_on: string; ends_on: string | null
+  }[]
+
   const now = new Date()
   const ativos = subs.map((s) => {
     const at = new Date(s.activated_at)
@@ -60,6 +74,45 @@ export default async function SuperPage() {
 
       <NewTenantForm />
       <ActivateForm tenants={rows.map((r) => ({ id: r.id, name: r.name }))} />
+      <ApplyCouponForm tenants={rows.map((r) => ({ id: r.id, name: r.name }))} />
+
+      {resgates.length > 0 && (
+        <div className="space-y-2 pt-2">
+          <h2 className="text-sm font-medium text-muted-foreground">Cupons ativos</h2>
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="text-left">
+                  <th className="px-4 py-2 font-medium">Cliente</th>
+                  <th className="px-4 py-2 font-medium">Cupom</th>
+                  <th className="px-4 py-2 font-medium">Alvo</th>
+                  <th className="px-4 py-2 font-medium">De → por</th>
+                  <th className="px-4 py-2 font-medium">Vigência</th>
+                  <th className="px-4 py-2 font-medium">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                {resgates.map((r) => (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="px-4 py-2">{r.name}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{r.code}</td>
+                    <td className="px-4 py-2 font-mono text-xs">{r.produto} · {tierLabel(r.tier)}</td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {brl(Number(r.base_value))} → {brl(Number(r.net_value))}
+                    </td>
+                    <td className="px-4 py-2 text-xs">
+                      {r.starts_on} → {r.ends_on ?? "sem fim"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <RevokeCouponButton redemptionId={r.id} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2 pt-2">
         <h2 className="text-sm font-medium text-muted-foreground">Assinaturas ativas · fidelidade {FIDELIDADE_MESES} meses</h2>

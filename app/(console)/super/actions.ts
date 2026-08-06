@@ -10,6 +10,8 @@ import { cancelSubscription, cancelAllSubscriptions } from "@/lib/provisioning/c
 import { deleteTenant } from "@/lib/tenant/delete"
 import { SeatError } from "@/lib/billing/seats"
 import { ChannelDowngradeError } from "@/lib/billing/channels-downgrade"
+import { applyCouponToSubscription, revokeCoupon, AdminCouponError } from "@/lib/coupons/admin"
+import { CouponError } from "@/lib/coupons/types"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 // Só o superadmin Sapienza cria tenant e ativa assinatura.
@@ -99,6 +101,47 @@ export async function cancelSubscriptionAction(
     return { ok: true }
   } catch (e) {
     return { error: e instanceof Error ? e.message : "falha ao cancelar assinatura" }
+  }
+}
+
+export type CouponState = { ok?: boolean; error?: string; info?: string }
+
+// Aplica um cupom a uma assinatura EXISTENTE (concessão negociada, sem checkout).
+// Mexe só no preço da recorrência do Asaas; plano/caps/assentos ficam.
+export async function applyCouponAction(_prev: CouponState, formData: FormData): Promise<CouponState> {
+  try {
+    await requireSuperadmin()
+    const tenantId = String(formData.get("tenant_id") ?? "")
+    const code = String(formData.get("code") ?? "")
+    if (!tenantId) return { error: "selecione o tenant" }
+    if (!code.trim()) return { error: "informe o código do cupom" }
+
+    const r = await applyCouponToSubscription({ tenantId, code })
+    revalidatePath("/super")
+    return {
+      ok: true,
+      info: `Aplicado: R$ ${r.net.toFixed(2)}/mês (de R$ ${r.base.toFixed(2)})${
+        r.endsOn ? ` até ${r.endsOn}` : " (enquanto durar a assinatura)"
+      }.`,
+    }
+  } catch (e) {
+    if (e instanceof CouponError || e instanceof AdminCouponError) return { error: e.message }
+    return { error: e instanceof Error ? e.message : "falha ao aplicar cupom" }
+  }
+}
+
+// Revoga um resgate ativo: a recorrência volta ao preço de tabela.
+export async function revokeCouponAction(_prev: CouponState, formData: FormData): Promise<CouponState> {
+  try {
+    await requireSuperadmin()
+    const redemptionId = String(formData.get("redemption_id") ?? "")
+    if (!redemptionId) return { error: "resgate inválido" }
+    await revokeCoupon({ redemptionId })
+    revalidatePath("/super")
+    return { ok: true }
+  } catch (e) {
+    if (e instanceof AdminCouponError) return { error: e.message }
+    return { error: e instanceof Error ? e.message : "falha ao revogar cupom" }
   }
 }
 
