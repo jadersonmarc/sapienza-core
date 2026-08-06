@@ -39,6 +39,7 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
     postalCode: "",
     addressNumber: "",
     phone: "",
+    coupon: "",
   })
   const [pw, setPw] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -114,6 +115,18 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
           className={field}
         />
         {mismatch && <span className="text-xs text-destructive">As senhas não coincidem.</span>}
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Cupom de desconto (opcional)</span>
+        <input
+          name="coupon"
+          autoComplete="off"
+          placeholder="ex.: NORTEC2026"
+          value={f.coupon}
+          onChange={set("coupon")}
+          className={`${field} uppercase placeholder:normal-case`}
+        />
       </label>
 
       <div className="mt-2 border-t border-border pt-4">

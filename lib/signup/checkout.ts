@@ -10,6 +10,9 @@ import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
 import { comboFor, type ProdutoId } from "@/lib/pricing/load"
 import { currentPeriod } from "@/lib/billing/period"
+import { validateCoupon, redeemCoupon } from "@/lib/coupons/redeem"
+import { computeDiscount, normalizeCode } from "@/lib/coupons/compute"
+import { CouponError, type Coupon, type CouponTarget } from "@/lib/coupons/types"
 
 // Checkout self-service: o site coleta os dados e chama a API pública que roda
 // isto. Cria a conta na hora em `past_due` (bloqueada) e emite a cobrança da 1ª
@@ -28,6 +31,9 @@ export type CheckoutInput = {
   password: string
   produto: CheckoutProduto
   tier: string
+  // Cupom de desconto (opcional). Validado 100% no servidor; o preço base vem
+  // sempre do pricing.yaml, nunca do request.
+  coupon?: string
   remoteIp: string
   // Cartão (transparente) + dados do titular exigidos pelo Asaas.
   card: { number: string; holderName: string; expiryMonth: string; expiryYear: string; ccv: string }
@@ -79,6 +85,20 @@ export async function checkoutSignup(
 
   const provider = paymentProvider()
   if (!provider.configured()) throw new CheckoutError("pagamento indisponível no momento")
+
+  // Cupom (opcional): valida ANTES de criar qualquer coisa. O alvo é o que está
+  // sendo assinado (combo é alvo próprio). Erro traduzido pelo motivo distinto.
+  const target: CouponTarget = { produto: isCombo ? "combo" : (input.produto as ProdutoId), tier: input.tier }
+  const couponCode = input.coupon?.trim() ? normalizeCode(input.coupon) : null
+  let coupon: Coupon | null = null
+  if (couponCode) {
+    try {
+      coupon = await validateCoupon(couponCode, target)
+    } catch (e) {
+      if (e instanceof CouponError) throw new CheckoutError(e.message)
+      throw e
+    }
+  }
 
   // Guarda: e-mail já cadastrado → não recria (o createTenant falharia no unique).
   // Mensagem clara para o cliente (evita o erro cru numa 2ª tentativa).
@@ -145,6 +165,16 @@ export async function checkoutSignup(
         { produto: input.produto, tier: input.tier, mensal: value, incluso: 0, count: 0, excedente: 0, subtotal: value },
       ]
     }
+    // Cupom: abate do valor de tabela (que é o `value` acima) e registra a linha
+    // de desconto. O Asaas recebe o líquido; o resgate é gravado após a recorrência.
+    if (coupon) {
+      const { discount, net } = computeDiscount(value, coupon.kind, coupon.value)
+      lines.push({
+        produto: "desconto_cupom", tier: input.tier, mensal: -discount,
+        incluso: 0, count: 0, excedente: 0, subtotal: -discount,
+      })
+      value = net
+    }
     const [invoice] = (await db.execute(sql`
       INSERT INTO public.invoices (tenant_id, period, status, lines, total_brl)
       VALUES (${tenantId}::uuid, ${period}, 'issued', ${JSON.stringify(lines)}::jsonb, ${value})
@@ -182,6 +212,15 @@ export async function checkoutSignup(
       UPDATE public.invoices SET provider_charge_id = ${sub.id}, due_date = ${dueInDays(3)}::date
        WHERE id = ${invoice.id}::uuid
     `)
+
+    // Resgate do cupom: um registro por assinatura (recorrência), com o
+    // provider_sub_id da recorrência recém-criada e o fim do desconto calculado
+    // agora. Trava e re-checa o esgotamento sob lock (corrida).
+    if (coupon) {
+      await db.transaction(async (tx) => {
+        await redeemCoupon(tx, { coupon: coupon!, tenantId, target, providerSubId: sub.id })
+      })
+    }
 
     // 7) E-mails: boas-vindas (cliente já escolheu a senha → needs_password_setup:
     // false) + verificação de e-mail (soft, não bloqueia). Consumer `mailer` envia.

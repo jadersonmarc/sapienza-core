@@ -26,6 +26,7 @@ class FakeProvider implements PaymentProvider {
   async createCardSubscription(input: { externalReference: string }) {
     return { id: "sub_" + input.externalReference.slice(0, 6), status: "ACTIVE" }
   }
+  async updateSubscriptionValue() {}
   async cancelSubscription() {}
 }
 

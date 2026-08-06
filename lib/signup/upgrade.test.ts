@@ -30,6 +30,7 @@ class FakeProvider implements PaymentProvider {
     }
     return { id: "sub_new_" + input.externalReference.slice(0, 4), status: "ACTIVE" }
   }
+  async updateSubscriptionValue() {}
   async cancelSubscription(id: string) {
     canceled.push(id)
   }

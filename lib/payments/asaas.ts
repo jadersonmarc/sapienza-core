@@ -42,6 +42,13 @@ export interface PaymentProvider {
   createCharge(input: ChargeInput): Promise<Charge>
   /** Cria a assinatura recorrente no cartão (transparente). */
   createCardSubscription(input: CardSubscriptionInput): Promise<CardSubscription>
+  /**
+   * Atualiza o valor mensal de uma assinatura recorrente. Usado pelo cupom: o
+   * Asaas não tem desconto nativo de cupom, então mandamos o valor JÁ calculado
+   * (líquido ao aplicar, preço de tabela ao expirar). `updatePendingPayments`
+   * reflete o novo valor nas cobranças ainda não pagas.
+   */
+  updateSubscriptionValue(subscriptionId: string, value: number): Promise<void>
   /** Cancela a assinatura recorrente no provedor (para de cobrar o cartão). */
   cancelSubscription(subscriptionId: string): Promise<void>
 }
@@ -140,6 +147,13 @@ class Asaas implements PaymentProvider {
       },
     })
     return { id: r.id, status: r.status ?? "" }
+  }
+
+  async updateSubscriptionValue(subscriptionId: string, value: number): Promise<void> {
+    await this.req("POST", `/subscriptions/${subscriptionId}`, {
+      value,
+      updatePendingPayments: true,
+    })
   }
 
   async cancelSubscription(subscriptionId: string): Promise<void> {
