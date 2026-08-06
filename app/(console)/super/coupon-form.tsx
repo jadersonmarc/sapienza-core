@@ -1,7 +1,14 @@
 "use client"
 
-import { useActionState } from "react"
-import { applyCouponAction, revokeCouponAction, type CouponState } from "./actions"
+import { useActionState, useState } from "react"
+import {
+  applyCouponAction,
+  revokeCouponAction,
+  createCouponAction,
+  toggleCouponActiveAction,
+  type CouponState,
+  type CouponCatalogState,
+} from "./actions"
 
 const initial: CouponState = {}
 const field = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
@@ -52,6 +59,117 @@ export function ApplyCouponForm({ tenants }: { tenants: { id: string; name: stri
         </div>
       </form>
     </div>
+  )
+}
+
+const catalogInitial: CouponCatalogState = {}
+
+// Cria um cupom no catálogo. Os campos de escopo aparecem conforme o tipo de
+// escopo (global não leva nada; produto leva produto+plano; combo leva plano).
+export function CreateCouponForm() {
+  const [state, action, pending] = useActionState(createCouponAction, catalogInitial)
+  const [kind, setKind] = useState("fixo")
+  const [scope, setScope] = useState("global")
+
+  return (
+    <div className="space-y-4 rounded-xl border border-border p-5">
+      <h2 className="text-sm font-semibold">Criar cupom</h2>
+      <form action={action} className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_code">Código</label>
+            <input id="new_code" name="code" className={`${field} uppercase`} placeholder="SAPIENZA2026" required />
+          </div>
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_kind">Tipo</label>
+            <select id="new_kind" name="kind" className={field} value={kind} onChange={(e) => setKind(e.target.value)}>
+              <option value="fixo">Fixo (R$)</option>
+              <option value="percentual">Percentual (%)</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_value">{kind === "percentual" ? "Valor (%)" : "Valor (R$)"}</label>
+            <input id="new_value" name="value" type="number" step="0.01" min="0" className={field} required />
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_scope">Escopo</label>
+            <select id="new_scope" name="scope_kind" className={field} value={scope} onChange={(e) => setScope(e.target.value)}>
+              <option value="global">Global (qualquer plano)</option>
+              <option value="produto">Produto + plano</option>
+              <option value="combo">Combo + plano</option>
+            </select>
+          </div>
+          {scope === "produto" && (
+            <div className="space-y-1">
+              <label className={label} htmlFor="new_produto">Produto</label>
+              <select id="new_produto" name="scope_produto" className={field} defaultValue="margot">
+                <option value="margot">Margot Atendente</option>
+                <option value="motor">Margot Editora</option>
+              </select>
+            </div>
+          )}
+          {scope !== "global" && (
+            <div className="space-y-1">
+              <label className={label} htmlFor="new_tier">Plano</label>
+              <select id="new_tier" name="scope_tier" className={field} defaultValue="pro">
+                <option value="start">Start</option>
+                <option value="pro">Pro</option>
+                <option value="scale">Premium</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_redeem_by">Resgatável até (opcional)</label>
+            <input id="new_redeem_by" name="redeem_by" type="date" className={field} />
+          </div>
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_max">Máx. de resgates (opcional)</label>
+            <input id="new_max" name="max_redemptions" type="number" min="1" step="1" className={field} placeholder="∞" />
+          </div>
+          <div className="space-y-1">
+            <label className={label} htmlFor="new_dur">Duração em meses (opcional)</label>
+            <input id="new_dur" name="duration_months" type="number" min="1" step="1" className={field} placeholder="enquanto durar" />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          >
+            {pending ? "Criando…" : "Criar cupom"}
+          </button>
+          {state.error && <span className="text-sm text-destructive">{state.error}</span>}
+          {state.ok && <span className="text-sm text-muted-foreground">Cupom criado.</span>}
+        </div>
+      </form>
+    </div>
+  )
+}
+
+// Liga/desliga um cupom do catálogo.
+export function ToggleCouponButton({ couponId, active }: { couponId: string; active: boolean }) {
+  const [state, action, pending] = useActionState(toggleCouponActiveAction, catalogInitial)
+  return (
+    <form action={action} className="inline-flex items-center gap-2">
+      <input type="hidden" name="coupon_id" value={couponId} />
+      <input type="hidden" name="active" value={active ? "false" : "true"} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-foreground/[0.06] disabled:opacity-50"
+      >
+        {pending ? "…" : active ? "Desativar" : "Ativar"}
+      </button>
+      {state.error && <span className="text-xs text-destructive">{state.error}</span>}
+    </form>
   )
 }
 

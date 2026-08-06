@@ -2,14 +2,15 @@ import { redirect } from "next/navigation"
 import { sql } from "drizzle-orm"
 import { currentContext } from "@/lib/console/current"
 import { db } from "@/lib/db"
-import { tierLabel } from "@/lib/pricing/tier-label"
+import { tierLabel, produtoLabel } from "@/lib/pricing/tier-label"
 import { mesesRestantes, multaCancelamento, FIDELIDADE_MESES } from "@/lib/billing/fidelidade"
+import { listCoupons } from "@/lib/coupons/manage"
 import { Eyebrow } from "@/components/eyebrow"
 import { NewTenantForm } from "./new-tenant-form"
 import { ActivateForm } from "./activate-form"
 import { CancelForm } from "./cancel-form"
 import { AccountActions } from "./account-actions"
-import { ApplyCouponForm, RevokeCouponButton } from "./coupon-form"
+import { ApplyCouponForm, RevokeCouponButton, CreateCouponForm, ToggleCouponButton } from "./coupon-form"
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -39,6 +40,14 @@ export default async function SuperPage() {
      WHERE s.status = 'active'
      ORDER BY t.name, s.produto
   `)) as unknown as { tenant_id: string; name: string; produto: string; tier: string; activated_at: string; mensal: string }[]
+
+  // Catálogo de cupons (todos) + resgates ativos.
+  const cupons = await listCoupons()
+  const escopoLabel = (c: (typeof cupons)[number]): string => {
+    if (c.scopeKind === "global") return "Global"
+    if (c.scopeKind === "combo") return `Combo · ${tierLabel(c.scopeTier ?? "")}`
+    return `${produtoLabel(c.scopeProduto ?? "")} · ${tierLabel(c.scopeTier ?? "")}`
+  }
 
   // Resgates de cupom ativos (para o superadmin revogar quando quiser).
   const resgates = (await db.execute(sql`
@@ -75,6 +84,58 @@ export default async function SuperPage() {
       <NewTenantForm />
       <ActivateForm tenants={rows.map((r) => ({ id: r.id, name: r.name }))} />
       <ApplyCouponForm tenants={rows.map((r) => ({ id: r.id, name: r.name }))} />
+
+      <CreateCouponForm />
+
+      <div className="space-y-2 pt-2">
+        <h2 className="text-sm font-medium text-muted-foreground">Catálogo de cupons</h2>
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="text-muted-foreground">
+              <tr className="text-left">
+                <th className="px-4 py-2 font-medium">Código</th>
+                <th className="px-4 py-2 font-medium">Desconto</th>
+                <th className="px-4 py-2 font-medium">Escopo</th>
+                <th className="px-4 py-2 font-medium">Validade</th>
+                <th className="px-4 py-2 font-medium">Usos</th>
+                <th className="px-4 py-2 font-medium">Duração</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Ação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cupons.length === 0 ? (
+                <tr className="border-t border-border">
+                  <td className="px-4 py-3 text-muted-foreground" colSpan={8}>Nenhum cupom cadastrado.</td>
+                </tr>
+              ) : (
+                cupons.map((c) => (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="px-4 py-2 font-mono text-xs">{c.code}</td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {c.kind === "fixo" ? brl(c.value) : `${c.value}%`}
+                    </td>
+                    <td className="px-4 py-2 text-xs">{escopoLabel(c)}</td>
+                    <td className="px-4 py-2 text-xs">{c.redeemBy ?? "—"}</td>
+                    <td className="px-4 py-2 font-mono text-xs">
+                      {c.redemptionCount}{c.maxRedemptions != null ? `/${c.maxRedemptions}` : " / ∞"}
+                    </td>
+                    <td className="px-4 py-2 text-xs">
+                      {c.durationMonths != null ? `${c.durationMonths} meses` : "enquanto durar"}
+                    </td>
+                    <td className="px-4 py-2 text-xs">
+                      {c.active ? <span className="text-primary">ativo</span> : <span className="text-muted-foreground">inativo</span>}
+                    </td>
+                    <td className="px-4 py-2">
+                      <ToggleCouponButton couponId={c.id} active={c.active} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {resgates.length > 0 && (
         <div className="space-y-2 pt-2">

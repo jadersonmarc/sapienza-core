@@ -11,7 +11,8 @@ import { deleteTenant } from "@/lib/tenant/delete"
 import { SeatError } from "@/lib/billing/seats"
 import { ChannelDowngradeError } from "@/lib/billing/channels-downgrade"
 import { applyCouponToSubscription, revokeCoupon, AdminCouponError } from "@/lib/coupons/admin"
-import { CouponError } from "@/lib/coupons/types"
+import { createCoupon, setCouponActive, CouponManageError } from "@/lib/coupons/manage"
+import { CouponError, type CouponKind, type CouponScopeKind } from "@/lib/coupons/types"
 import type { ProdutoId } from "@/lib/pricing/load"
 
 // Só o superadmin Sapienza cria tenant e ativa assinatura.
@@ -142,6 +143,57 @@ export async function revokeCouponAction(_prev: CouponState, formData: FormData)
   } catch (e) {
     if (e instanceof AdminCouponError) return { error: e.message }
     return { error: e instanceof Error ? e.message : "falha ao revogar cupom" }
+  }
+}
+
+export type CouponCatalogState = { ok?: boolean; error?: string }
+
+// Cria um cupom no catálogo (superadmin). Preço base sempre do pricing.yaml no
+// resgate; aqui só a definição. Valores em número; campos opcionais viram null.
+export async function createCouponAction(_prev: CouponCatalogState, formData: FormData): Promise<CouponCatalogState> {
+  try {
+    await requireSuperadmin()
+    const scopeKind = String(formData.get("scope_kind") ?? "global") as CouponScopeKind
+    const num = (k: string): number | null => {
+      const v = String(formData.get(k) ?? "").trim()
+      return v === "" ? null : Number(v)
+    }
+    const str = (k: string): string | null => {
+      const v = String(formData.get(k) ?? "").trim()
+      return v === "" ? null : v
+    }
+    await createCoupon({
+      code: String(formData.get("code") ?? ""),
+      kind: String(formData.get("kind") ?? "fixo") as CouponKind,
+      value: Number(formData.get("value") ?? 0),
+      scopeKind,
+      // Só leva produto no escopo 'produto'; só leva tier em produto/combo.
+      scopeProduto: scopeKind === "produto" ? (str("scope_produto") as ProdutoId | null) : null,
+      scopeTier: scopeKind === "global" ? null : str("scope_tier"),
+      redeemBy: str("redeem_by"),
+      maxRedemptions: num("max_redemptions"),
+      durationMonths: num("duration_months"),
+    })
+    revalidatePath("/super")
+    return { ok: true }
+  } catch (e) {
+    if (e instanceof CouponManageError) return { error: e.message }
+    return { error: e instanceof Error ? e.message : "falha ao criar cupom" }
+  }
+}
+
+// Liga/desliga um cupom do catálogo.
+export async function toggleCouponActiveAction(_prev: CouponCatalogState, formData: FormData): Promise<CouponCatalogState> {
+  try {
+    await requireSuperadmin()
+    const id = String(formData.get("coupon_id") ?? "")
+    const active = formData.get("active") === "true"
+    if (!id) return { error: "cupom inválido" }
+    await setCouponActive(id, active)
+    revalidatePath("/super")
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "falha ao atualizar cupom" }
   }
 }
 
