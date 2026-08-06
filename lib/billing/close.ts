@@ -14,6 +14,7 @@ type Row = {
   tenant_id: string
   produto: string
   tier: string
+  billing_model: string
   activated_at: Date
   mensal: string
   incluso: number
@@ -57,11 +58,11 @@ export async function closeTenantInvoice(tenantId: string, period: Period): Prom
   }
 
   const rows = (await db.execute(sql`
-    SELECT s.tenant_id, s.produto, s.tier, s.activated_at,
+    SELECT s.tenant_id, s.produto, s.tier, s.billing_model, s.activated_at,
            p.mensal, p.incluso, p.excedente_unitario, p.piso, p.metric,
            uc.count
       FROM public.subscriptions s
-      JOIN public.plans p ON p.produto = s.produto AND p.tier = s.tier
+      JOIN public.plans p ON p.produto = s.produto AND p.tier = s.tier AND p.model = s.billing_model
       LEFT JOIN public.usage_counters uc
              ON uc.tenant_id = s.tenant_id AND uc.produto = s.produto
             AND uc.period = ${period} AND uc.metric = p.metric
@@ -78,11 +79,13 @@ export async function closeTenantInvoice(tenantId: string, period: Period): Prom
     const mi = monthIndex(new Date(r.activated_at), at)
     // A mensalidade FIXA é cobrada pela assinatura recorrente no cartão (Asaas).
     // O fechamento mensal cobra só o EXCEDENTE do uso — senão dobra o fixo.
+    // Degrau 13 (preço cai ao piso no mês >=13) é do modelo ANUAL (fidelidade 12m);
+    // no mensal não há Degrau 13.
     const exced = overage(count, r.incluso, exc)
     lines.push({
       produto: r.produto,
       tier: r.tier,
-      mensal: mi >= 13 ? piso : mensal, // informativo: cobrado na recorrência
+      mensal: r.billing_model === "anual" && mi >= 13 ? piso : mensal, // informativo: cobrado na recorrência
       incluso: r.incluso,
       count,
       excedente: exced,

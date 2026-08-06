@@ -31,6 +31,8 @@ export const subscriptionStatus = pgEnum("subscription_status", [
   "canceled",
 ])
 export const billingCycle = pgEnum("billing_cycle", ["mensal"])
+// Modelo comercial: anual (contrato 12m, fidelidade) vs mensal (sem fidelidade).
+export const billingModelKind = pgEnum("billing_model_kind", ["anual", "mensal"])
 export const invoiceStatus = pgEnum("invoice_status", ["open", "issued", "paid", "void", "overdue"])
 
 // ── tenants (identidade canônica do cliente na plataforma) ───────────────────
@@ -92,14 +94,15 @@ export const memberships = pgTable("memberships", {
 export const plans = pgTable("plans", {
   produto: produtoEnum("produto").notNull(),
   tier: text("tier").notNull(), // start|pro|scale
+  model: billingModelKind("model").notNull().default("anual"), // preço por modelo
   metric: text("metric").notNull(), // resposta|peca
   mensal: numeric("mensal", { precision: 12, scale: 2 }).notNull(),
   incluso: integer("incluso").notNull(),
   canais: integer("canais"), // motor: canais inclusos; margot: null
   excedenteUnitario: numeric("excedente_unitario", { precision: 12, scale: 2 }).notNull(),
-  // Piso da mensalidade (Degrau 13): menor `mensal` do produto.
+  // Piso da mensalidade (Degrau 13): menor `mensal` anual do produto.
   piso: numeric("piso", { precision: 12, scale: 2 }).notNull(),
-}, (t) => [primaryKey({ columns: [t.produto, t.tier] })])
+}, (t) => [primaryKey({ columns: [t.produto, t.tier, t.model] })])
 
 // ── product_rules (regras de produto do pricing.yaml; lidas pelos data planes) ─
 export const productRules = pgTable("product_rules", {
@@ -116,6 +119,10 @@ export const subscriptions = pgTable("subscriptions", {
   tier: text("tier").notNull(),
   status: subscriptionStatus("status").notNull().default("active"),
   cycle: billingCycle("cycle").notNull().default("mensal"),
+  // Modelo comercial (anual|mensal). Último valor setado na recorrência do Asaas
+  // (base de idempotência do cron de reconciliação).
+  billingModel: billingModelKind("billing_model").notNull().default("anual"),
+  recurrenceValue: numeric("recurrence_value", { precision: 12, scale: 2 }),
   // Degrau 13: mês >= 13 desde activatedAt → mensalidade cai ao piso.
   activatedAt: timestamp("activated_at", { withTimezone: true }).notNull().defaultNow(),
   // Gating: soft (default) fatura excedente; hard bloqueia ao atingir o incluso.
@@ -250,7 +257,9 @@ export const coupons = pgTable("coupons", {
   redeemBy: date("redeem_by"), // data limite p/ resgate (null = sem limite)
   maxRedemptions: integer("max_redemptions"), // null = ilimitado
   redemptionCount: integer("redemption_count").notNull().default(0),
-  durationMonths: integer("duration_months"), // null = enquanto a assinatura viver
+  // Modelo(s) em que o cupom pode ser resgatado: 'anual' | 'mensal' | 'ambos'.
+  // Cupom NÃO tem duração própria — a vigência = o termo da assinatura.
+  billingModel: text("billing_model").notNull().default("ambos"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -264,6 +273,7 @@ export const couponRedemptions = pgTable("coupon_redemptions", {
   providerSubId: text("provider_sub_id"), // recorrência Asaas descontada
   produto: text("produto").notNull(), // 'margot' | 'motor' | 'combo'
   tier: text("tier").notNull(),
+  billingModel: billingModelKind("billing_model").notNull().default("anual"),
   baseValue: numeric("base_value", { precision: 12, scale: 2 }).notNull(),
   discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull(),
   netValue: numeric("net_value", { precision: 12, scale: 2 }).notNull(),

@@ -55,7 +55,8 @@ async function ownerOf(tenantId: string): Promise<string | null> {
 /** canais permitidos por um tier do motor (plans.canais). */
 async function channelsForTier(tier: string): Promise<number> {
   const rows = (await db.execute(sql`
-    SELECT COALESCE(canais, 0) AS canais FROM public.plans WHERE produto = 'motor' AND tier = ${tier}
+    SELECT COALESCE(canais, 0) AS canais FROM public.plans
+     WHERE produto = 'motor' AND tier = ${tier} LIMIT 1
   `)) as unknown as { canais: number }[]
   return rows[0]?.canais ?? 0
 }

@@ -22,6 +22,7 @@ export type MotorBilling = {
 
 type Row = {
   tier: string
+  billing_model: string
   activated_at: Date
   mensal: string
   incluso: number
@@ -40,11 +41,11 @@ export async function motorMonthlyBilling(
   period = currentPeriod(),
 ): Promise<MotorBilling | null> {
   const rows = (await db.execute(sql`
-    SELECT s.tier, s.activated_at, COALESCE(s.hard_cap, false) AS hard_cap,
+    SELECT s.tier, s.billing_model, s.activated_at, COALESCE(s.hard_cap, false) AS hard_cap,
            p.mensal, p.incluso, p.excedente_unitario, p.piso, p.metric,
            uc.count
       FROM public.subscriptions s
-      JOIN public.plans p ON p.produto = s.produto AND p.tier = s.tier
+      JOIN public.plans p ON p.produto = s.produto AND p.tier = s.tier AND p.model = s.billing_model
       LEFT JOIN public.usage_counters uc
              ON uc.tenant_id = s.tenant_id AND uc.produto = s.produto
             AND uc.period = ${period} AND uc.metric = p.metric
@@ -58,7 +59,8 @@ export async function motorMonthlyBilling(
   const mensal = Number(r.mensal)
   const piso = Number(r.piso)
   const exc = Number(r.excedente_unitario)
-  const mi = monthIndex(new Date(r.activated_at), new Date())
+  // Degrau 13 é do modelo ANUAL; no mensal não há (força mi=1 p/ não disparar).
+  const mi = r.billing_model === "anual" ? monthIndex(new Date(r.activated_at), new Date()) : 1
   const subtotal = invoiceLine({
     tierMensal: mensal,
     piso,

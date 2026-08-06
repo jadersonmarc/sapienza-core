@@ -12,11 +12,12 @@ import { loadPricing, type Pricing, type ProdutoId } from "@/lib/pricing/load"
 //   default → ../spa-sapienza/config/pricing.public.json (ou env PRICING_PUBLIC_OUT)
 // Ao editar config/pricing.yaml, rode `pnpm pricing:public` e commite o JSON no site.
 
-type PublicTier = { id: string; mensal: number; incluso: number; canais?: number }
+// `mensal` = preço do modelo ANUAL; `mensal_sf` = modelo MENSAL (sem fidelidade).
+type PublicTier = { id: string; mensal: number; mensal_sf: number; incluso: number; canais?: number }
 type PublicProduto = { nome: string; metric: string; tiers: PublicTier[] }
 // Combos POR TIER (margot + motor no mesmo tier) são VALOR público — o site exibe
 // de/por/economia. Não confundir com `combo_sistema_sapienza` (comercial, só --full).
-type PublicCombo = { tier: string; mensal: number; economia: number }
+type PublicCombo = { tier: string; mensal: number; mensal_sf: number; economia: number }
 type Comercial = {
   setup: Pricing["setup"]
   combo: Pricing["combo_sistema_sapienza"]
@@ -36,6 +37,7 @@ function projectProduto(def: Pricing["produtos"][ProdutoId]): PublicProduto {
     tiers: def.tiers.map((t) => ({
       id: t.id,
       mensal: t.mensal,
+      mensal_sf: t.mensal_sf,
       incluso: t.incluso,
       ...(t.canais != null ? { canais: t.canais } : {}),
     })),
@@ -49,7 +51,7 @@ function project(pricing: Pricing, full: boolean): PublicPricing {
       margot: projectProduto(pricing.produtos.margot),
       motor: projectProduto(pricing.produtos.motor),
     },
-    combos: pricing.combos.map((c) => ({ tier: c.tier, mensal: c.mensal, economia: c.economia })),
+    combos: pricing.combos.map((c) => ({ tier: c.tier, mensal: c.mensal, mensal_sf: c.mensal_sf, economia: c.economia })),
   }
   if (full) {
     out.comercial = {

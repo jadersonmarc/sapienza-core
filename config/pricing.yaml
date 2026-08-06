@@ -14,10 +14,13 @@ produtos:
   margot:
     nome: "Margot Atendente"
     metric: "resposta"          # 1 resposta = 1 mensagem gerada e enviada pela IA
+    # `mensal` = preço do modelo ANUAL (contrato 12 meses pago mensal). `mensal_sf`
+    # = modelo MENSAL sem fidelidade (mais alto). Limites (incluso/canais) idênticos
+    # nos dois modelos — muda só preço e prazo.
     tiers:
-      - { id: start, mensal: 400,  incluso: 500 }
-      - { id: pro,   mensal: 700,  incluso: 1500 }
-      - { id: scale, mensal: 1200, incluso: 5000 }
+      - { id: start, mensal: 400,  mensal_sf: 500,  incluso: 500 }
+      - { id: pro,   mensal: 700,  mensal_sf: 900,  incluso: 1500 }
+      - { id: scale, mensal: 1200, mensal_sf: 1500, incluso: 5000 }
     excedente_unitario: 0.50    # por resposta acima do incluso
     regras:
       handoff_max_mensagens: 15  # >15 respostas numa conversa -> handoff humano
@@ -28,9 +31,9 @@ produtos:
     nome: "Margot Editora"
     metric: "peca"              # PEÇA PUBLICADA (não gerada)
     tiers:
-      - { id: start, mensal: 400,  incluso: 12, canais: 1 }
-      - { id: pro,   mensal: 700,  incluso: 30, canais: 2 }
-      - { id: scale, mensal: 1200, incluso: 60, canais: 3 }   # +blog SEO
+      - { id: start, mensal: 400,  mensal_sf: 500,  incluso: 12, canais: 1 }
+      - { id: pro,   mensal: 700,  mensal_sf: 900,  incluso: 30, canais: 2 }
+      - { id: scale, mensal: 1200, mensal_sf: 1500, incluso: 60, canais: 3 }   # +blog SEO
     excedente_unitario: 25.0
     regras:
       janela_aprovacao_horas: 48         # silêncio = aprovado -> publica
@@ -43,9 +46,9 @@ produtos:
 # preço reduzido. `mensal` = preço do combo; `economia` = desconto vs. soma dos avulsos
 # (mensal + economia DEVE bater com margot[tier].mensal + motor[tier].mensal).
 combos:
-  - { tier: start, mensal: 700,  economia: 100 }  # 400 + 400 = 800
-  - { tier: pro,   mensal: 1200, economia: 200 }  # 700 + 700 = 1400
-  - { tier: scale, mensal: 2000, economia: 400 }  # 1200 + 1200 = 2400
+  - { tier: start, mensal: 700,  mensal_sf: 900,  economia: 100 }  # anual 400+400=800; mensal 500+500=1000
+  - { tier: pro,   mensal: 1200, mensal_sf: 1500, economia: 200 }  # anual 700+700=1400; mensal 900+900=1800
+  - { tier: scale, mensal: 2000, mensal_sf: 2500, economia: 400 }  # anual 1200+1200=2400; mensal 1500+1500=3000
 # Legado (outro conceito comercial: setup + portas de pagamento; NÃO é o combo por tier).
 combo_sistema_sapienza:
   setup: 6000

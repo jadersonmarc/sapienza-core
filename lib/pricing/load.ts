@@ -8,7 +8,8 @@ import { z } from "zod"
 
 const tierSchema = z.object({
   id: z.enum(["start", "pro", "scale"]),
-  mensal: z.number().nonnegative(),
+  mensal: z.number().nonnegative(), // preço do modelo ANUAL (contrato 12m pago mensal)
+  mensal_sf: z.number().nonnegative(), // preço do modelo MENSAL (sem fidelidade)
   incluso: z.number().int().nonnegative(),
   canais: z.number().int().positive().optional(),
 })
@@ -55,7 +56,8 @@ const pricingSchema = z.object({
     .array(
       z.object({
         tier: z.enum(["start", "pro", "scale"]),
-        mensal: z.number().nonnegative(),
+        mensal: z.number().nonnegative(), // combo anual
+        mensal_sf: z.number().nonnegative(), // combo mensal (sem fidelidade)
         economia: z.number().nonnegative(),
       }),
     )
@@ -79,6 +81,10 @@ export type ProdutoId = keyof Pricing["produtos"]
 export type Combo = Pricing["combos"][number]
 export type TierId = Combo["tier"]
 
+// Modelo comercial: anual (contrato 12m, fidelidade, implantação isenta) ou mensal
+// (sem fidelidade, implantação = 1 mensalidade na adesão). Muda só preço e prazo.
+export type BillingModel = "anual" | "mensal"
+
 let cached: Pricing | null = null
 
 /** Lê, valida (zod) e cacheia o pricing.yaml. Lança no boot se inválido. */
@@ -101,9 +107,26 @@ export function comboFor(tier: string, pricing: Pricing = loadPricing()): Combo 
   return pricing.combos.find((c) => c.tier === tier)
 }
 
-/** Preço mensal do combo daquele tier. Lança se o tier não existir. */
+/** Preço mensal do combo daquele tier (modelo ANUAL). Lança se não existir. */
 export function comboMensal(tier: string, pricing: Pricing = loadPricing()): number {
+  return comboPreco(tier, "anual", pricing)
+}
+
+/** Preço mensal de um tier de produto, por MODELO (anual = mensal; mensal = mensal_sf). */
+export function precoDe(
+  produto: ProdutoId,
+  tier: string,
+  model: BillingModel,
+  pricing: Pricing = loadPricing(),
+): number {
+  const t = pricing.produtos[produto].tiers.find((x) => x.id === tier)
+  if (!t) throw new Error(`tier inexistente: ${produto}/${tier}`)
+  return model === "mensal" ? t.mensal_sf : t.mensal
+}
+
+/** Preço do combo por tier e MODELO. Lança se o tier não tiver combo. */
+export function comboPreco(tier: string, model: BillingModel, pricing: Pricing = loadPricing()): number {
   const combo = comboFor(tier, pricing)
   if (!combo) throw new Error(`combo inexistente para o tier: ${tier}`)
-  return combo.mensal
+  return model === "mensal" ? combo.mensal_sf : combo.mensal
 }
