@@ -311,11 +311,17 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 
 | Repo | Secrets | Jobs |
 |---|---|---|
-| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC), `dunning` (diário, 07:00 UTC), `email-dispatch` (5min) |
+| `sapienza-core` | `CORE_URL`, `WEBHOOK_SECRET` | `billing-close` (dia 1, 06:00 UTC), `dunning` (diário, 07:00 UTC), `email-dispatch` (5min), `coupon-expiry` (diário, 06:00 UTC) |
 | `sapienza-motor` | `MOTOR_URL`, `MOTION_URL`, `WEBHOOK_SECRET` | `publish-scheduled` (10min), `close-approval-window` (15min), `provision` (1h), `generate-draft` (seg/qua/sex), `render-motion` (5min) |
 
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
 `MOTION_URL` = URL pública do serviço de render (§5b), sem barra no fim.
+
+**Cupons de desconto.** A migration `0010` sobe as tabelas no boot (`db:migrate`). Semeie os
+cupons de lançamento com `pnpm coupons:seed` (idempotente; ex.: `NORTEC2026` = R$200 no Combo Pro,
+12 meses, 1 uso). O Asaas **não** tem cupom nativo em assinatura — o desconto é calculado no core e
+a recorrência recebe o valor **já líquido**; o cron `coupon-expiry` devolve a recorrência ao preço de
+tabela quando o desconto vence. Concessões fora do checkout: superadmin aplica/revoga em `/super`.
 
 **Teste o de billing agora, não no dia 1.** É o que gera receita e o que mais silenciosamente
 falha:
