@@ -42,6 +42,7 @@ export async function signupAction(_prev: SignupState, form: FormData): Promise<
       password,
       produto: String(form.get("produto") ?? "") as CheckoutProduto,
       tier: String(form.get("tier") ?? ""),
+      model: String(form.get("model") ?? "anual") === "mensal" ? "mensal" : "anual",
       coupon: String(form.get("coupon") ?? ""),
       remoteIp,
       card: {

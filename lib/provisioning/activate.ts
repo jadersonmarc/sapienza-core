@@ -30,6 +30,8 @@ export async function activateSubscription(args: {
   produto: ProdutoId
   tier: string
   hardCap?: boolean
+  // Modelo comercial (anual|mensal). Default 'anual' (superadmin/atuais).
+  billingModel?: "anual" | "mensal"
   // Estado inicial. Default 'active' (superadmin). O checkout passa 'past_due':
   // provisiona schema + eventos, mas o gating bloqueia até o pagamento (o webhook
   // reativa para 'active').
@@ -52,11 +54,12 @@ export async function activateSubscription(args: {
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`
-      INSERT INTO public.subscriptions (tenant_id, produto, tier, status, hard_cap)
-      VALUES (${args.tenantId}::uuid, ${args.produto}, ${args.tier}, ${status}::subscription_status, ${args.hardCap ?? false})
+      INSERT INTO public.subscriptions (tenant_id, produto, tier, status, hard_cap, billing_model)
+      VALUES (${args.tenantId}::uuid, ${args.produto}, ${args.tier}, ${status}::subscription_status,
+              ${args.hardCap ?? false}, ${args.billingModel ?? "anual"}::billing_model_kind)
       ON CONFLICT (tenant_id, produto)
       DO UPDATE SET tier = EXCLUDED.tier, status = EXCLUDED.status,
-                    hard_cap = EXCLUDED.hard_cap, updated_at = now()
+                    hard_cap = EXCLUDED.hard_cap, billing_model = EXCLUDED.billing_model, updated_at = now()
     `)
 
     // Schema vazio; nome já validado acima. sql.raw é seguro aqui.

@@ -5,7 +5,7 @@ import { activateSubscription } from "@/lib/provisioning/activate"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { currentPeriod } from "@/lib/billing/period"
 import { tierRank } from "@/lib/billing/seats"
-import type { ProdutoId } from "@/lib/pricing/load"
+import { precoDe, type BillingModel, type ProdutoId } from "@/lib/pricing/load"
 
 // Upgrade self-service (modelo "refaz o pagamento no ato"): o cliente sobe de
 // tier redigitando o cartão. Cria uma NOVA assinatura recorrente no valor do novo
@@ -43,10 +43,10 @@ export async function upgradeSubscription(input: UpgradeInput): Promise<{ invoic
 
   // Assinatura atual do produto no tenant.
   const [current] = (await db.execute(sql`
-    SELECT tier, status, hard_cap, provider_sub_id
+    SELECT tier, status, hard_cap, billing_model, provider_sub_id
       FROM public.subscriptions
      WHERE tenant_id = ${input.tenantId}::uuid AND produto = ${input.produto}
-  `)) as unknown as { tier: string; status: string; hard_cap: boolean; provider_sub_id: string | null }[]
+  `)) as unknown as { tier: string; status: string; hard_cap: boolean; billing_model: string; provider_sub_id: string | null }[]
   if (!current) throw new UpgradeError("assinatura não encontrada")
   if (current.status !== "active") throw new UpgradeError("assinatura não está ativa")
   if (tierRank(input.toTier) <= tierRank(current.tier)) {
@@ -88,12 +88,8 @@ export async function upgradeSubscription(input: UpgradeInput): Promise<{ invoic
   if (!addressNumber) throw new UpgradeError("informe o número do endereço")
   if (phone.length < 10) throw new UpgradeError("telefone inválido (com DDD)")
 
-  // Mensalidade do novo tier (do plano materializado).
-  const [plan] = (await db.execute(sql`
-    SELECT mensal FROM public.plans WHERE produto = ${input.produto} AND tier = ${input.toTier}
-  `)) as unknown as { mensal: string }[]
-  if (!plan) throw new UpgradeError("plano não encontrado")
-  const value = Number(plan.mensal)
+  // Mensalidade do novo tier, no MESMO modelo da assinatura atual (pricing.yaml).
+  const value = precoDe(input.produto, input.toTier, current.billing_model as BillingModel)
 
   // Fatura do upgrade no período corrente (linha do novo tier).
   const period = currentPeriod()
@@ -135,9 +131,10 @@ export async function upgradeSubscription(input: UpgradeInput): Promise<{ invoic
     produto: input.produto,
     tier: input.toTier,
     hardCap: current.hard_cap,
+    billingModel: current.billing_model as BillingModel,
   })
   await db.execute(sql`
-    UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, updated_at = now()
+    UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, recurrence_value = ${value}, updated_at = now()
      WHERE tenant_id = ${input.tenantId}::uuid AND produto = ${input.produto}
   `)
   await db.execute(sql`

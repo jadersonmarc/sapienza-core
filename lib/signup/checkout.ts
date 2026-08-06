@@ -8,7 +8,7 @@ import { emitEvent } from "@/lib/events/emit"
 import { requestEmailVerification } from "@/lib/auth/account"
 import { paymentProvider } from "@/lib/payments/asaas"
 import { validatePasswordStrength } from "@/lib/auth/password"
-import { comboFor, type ProdutoId } from "@/lib/pricing/load"
+import { comboFor, comboPreco, precoDe, type BillingModel, type ProdutoId } from "@/lib/pricing/load"
 import { currentPeriod } from "@/lib/billing/period"
 import { validateCoupon, redeemCoupon } from "@/lib/coupons/redeem"
 import { computeDiscount, normalizeCode } from "@/lib/coupons/compute"
@@ -31,6 +31,9 @@ export type CheckoutInput = {
   password: string
   produto: CheckoutProduto
   tier: string
+  // Modelo comercial: 'anual' (default, contrato 12m, implantação isenta) ou
+  // 'mensal' (sem fidelidade, implantação = 1 mensalidade na adesão).
+  model?: BillingModel
   // Cupom de desconto (opcional). Validado 100% no servidor; o preço base vem
   // sempre do pricing.yaml, nunca do request.
   coupon?: string
@@ -57,6 +60,7 @@ export async function checkoutSignup(
 ): Promise<{ tenantId: string; invoiceId: string }> {
   const email = input.email.trim().toLowerCase()
   const isCombo = input.produto === "combo"
+  const model: BillingModel = input.model === "mensal" ? "mensal" : "anual"
   if (!isCombo && !PRODUTOS.has(input.produto)) throw new CheckoutError("produto inválido")
   if (!TIERS.has(input.tier)) throw new CheckoutError("plano inválido")
   if (isCombo && !comboFor(input.tier)) throw new CheckoutError("combo indisponível para este plano")
@@ -88,7 +92,7 @@ export async function checkoutSignup(
 
   // Cupom (opcional): valida ANTES de criar qualquer coisa. O alvo é o que está
   // sendo assinado (combo é alvo próprio). Erro traduzido pelo motivo distinto.
-  const target: CouponTarget = { produto: isCombo ? "combo" : (input.produto as ProdutoId), tier: input.tier }
+  const target: CouponTarget = { produto: isCombo ? "combo" : (input.produto as ProdutoId), tier: input.tier, model }
   const couponCode = input.coupon?.trim() ? normalizeCode(input.coupon) : null
   let coupon: Coupon | null = null
   if (couponCode) {
@@ -129,17 +133,10 @@ export async function checkoutSignup(
     // 3) assinatura(s) em past_due (bloqueada até pagar) + schema + eventos.
     // Combo ativa margot E motor no mesmo tier — o pagamento libera os dois.
     for (const produto of produtos) {
-      await activateSubscription({ tenantId, produto, tier: input.tier, status: "past_due" })
+      await activateSubscription({ tenantId, produto, tier: input.tier, status: "past_due", billingModel: model })
     }
 
-    // 4) mensalidade de cada produto (do plano materializado)
-    const planRows = (await db.execute(sql`
-      SELECT produto, mensal FROM public.plans
-       WHERE produto IN ${produtos} AND tier = ${input.tier}
-    `)) as unknown as { produto: string; mensal: string }[]
-    if (planRows.length !== produtos.length) throw new CheckoutError("plano não encontrado")
-    const mensalDe = new Map(planRows.map((r) => [r.produto, Number(r.mensal)]))
-
+    // 4) preço por MODELO (pricing.yaml — nunca do request).
     // 5) valor cobrado + linhas da fatura de ativação (período atual).
     // Combo: linhas dos dois produtos + uma linha de desconto → total = preço do combo.
     const period = currentPeriod()
@@ -149,18 +146,18 @@ export async function checkoutSignup(
       incluso: number; count: number; excedente: number; subtotal: number
     }[]
     if (isCombo) {
-      const combo = comboFor(input.tier)!
-      value = combo.mensal
+      value = comboPreco(input.tier, model)
+      const soma = produtos.reduce((s, p) => s + precoDe(p, input.tier, model), 0)
       lines = produtos.map((produto) => {
-        const m = mensalDe.get(produto)!
+        const m = precoDe(produto, input.tier, model)
         return { produto, tier: input.tier, mensal: m, incluso: 0, count: 0, excedente: 0, subtotal: m }
       })
       lines.push({
-        produto: "desconto_combo", tier: input.tier, mensal: -combo.economia,
-        incluso: 0, count: 0, excedente: 0, subtotal: -combo.economia,
+        produto: "desconto_combo", tier: input.tier, mensal: value - soma,
+        incluso: 0, count: 0, excedente: 0, subtotal: value - soma,
       })
     } else {
-      value = mensalDe.get(input.produto as ProdutoId)!
+      value = precoDe(input.produto as ProdutoId, input.tier, model)
       lines = [
         { produto: input.produto, tier: input.tier, mensal: value, incluso: 0, count: 0, excedente: 0, subtotal: value },
       ]
@@ -202,16 +199,44 @@ export async function checkoutSignup(
       holder: { name: input.name, email, taxId, postalCode, addressNumber, phone },
     })
 
-    // Guarda o id da assinatura no provedor (para cancelar a recorrência depois).
-    // Combo: a MESMA recorrência cobre margot + motor → grava o id nas duas linhas.
+    // Guarda o id da assinatura no provedor (para cancelar a recorrência depois) +
+    // o valor setado na recorrência (base de idempotência do cron de reconciliação).
+    // Combo: a MESMA recorrência cobre margot + motor → grava nas duas linhas.
     await db.execute(sql`
-      UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, updated_at = now()
+      UPDATE public.subscriptions SET provider_sub_id = ${sub.id}, recurrence_value = ${value}, updated_at = now()
        WHERE tenant_id = ${tenantId}::uuid AND produto IN ${produtos}
     `)
     await db.execute(sql`
       UPDATE public.invoices SET provider_charge_id = ${sub.id}, due_date = ${dueInDays(3)}::date
        WHERE id = ${invoice.id}::uuid
     `)
+
+    // Implantação (SÓ no mensal): uma mensalidade do plano/combo cobrada na adesão
+    // como cobrança AVULSA no Asaas, separada da assinatura. No anual é isenta.
+    // Fatura própria em período discriminado (impl-YYYY-MM) para não colidir com a
+    // de ativação (uma invoice por tenant×período) nem ser fechada no mês.
+    if (model === "mensal") {
+      const implValue = isCombo ? comboPreco(input.tier, "mensal") : precoDe(input.produto as ProdutoId, input.tier, "mensal")
+      const implLines = [
+        { produto: "implantacao", tier: input.tier, mensal: implValue, incluso: 0, count: 0, excedente: 0, subtotal: implValue },
+      ]
+      const [implInv] = (await db.execute(sql`
+        INSERT INTO public.invoices (tenant_id, period, status, lines, total_brl, due_date)
+        VALUES (${tenantId}::uuid, ${"impl-" + period}, 'issued', ${JSON.stringify(implLines)}::jsonb, ${implValue}, ${dueInDays(3)}::date)
+        RETURNING id
+      `)) as unknown as { id: string }[]
+      const charge = await provider.createCharge({
+        customerId: tenant.asaas_customer_id,
+        value: implValue,
+        dueDate: dueInDays(3),
+        description: isCombo ? `Sapienza — implantação combo ${input.tier}` : `Sapienza — implantação ${input.produto} ${input.tier}`,
+        externalReference: implInv.id,
+      })
+      await db.execute(sql`
+        UPDATE public.invoices SET provider_charge_id = ${charge.id}, payment_url = ${charge.invoiceUrl}
+         WHERE id = ${implInv.id}::uuid
+      `)
+    }
 
     // Resgate do cupom: um registro por assinatura (recorrência), com o
     // provider_sub_id da recorrência recém-criada e o fim do desconto calculado

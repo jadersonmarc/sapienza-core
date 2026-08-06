@@ -57,6 +57,14 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
       <input type="hidden" name="tier" value={tier} />
 
       <label className="flex flex-col gap-1 text-sm">
+        <span className="text-muted-foreground">Modelo</span>
+        <select name="model" defaultValue="anual" className={field}>
+          <option value="anual">Anual — 12 meses, sem taxa de implantação</option>
+          <option value="mensal">Mensal — sem fidelidade, com implantação na adesão</option>
+        </select>
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
         <span className="text-muted-foreground">Nome ou razão social</span>
         <input name="name" required autoComplete="organization" value={f.name} onChange={set("name")} className={field} />
       </label>
