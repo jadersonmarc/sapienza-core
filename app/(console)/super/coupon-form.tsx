@@ -36,7 +36,7 @@ export function ApplyCouponForm({ tenants }: { tenants: { id: string; name: stri
             <label className={label} htmlFor="coupon_code">
               Código do cupom
             </label>
-            <input id="coupon_code" name="code" className={`${field} uppercase`} placeholder="NORTEC2026" required />
+            <input id="coupon_code" name="code" className={`${field} uppercase`} placeholder="SAPIENZA2026" required />
           </div>
         </div>
         <div className="flex items-center gap-3">

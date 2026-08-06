@@ -122,7 +122,7 @@ export function CadastroForm({ produto, tier }: { produto: string; tier: string 
         <input
           name="coupon"
           autoComplete="off"
-          placeholder="ex.: NORTEC2026"
+          placeholder="ex.: SAPIENZA2026"
           value={f.coupon}
           onChange={set("coupon")}
           className={`${field} uppercase placeholder:normal-case`}
