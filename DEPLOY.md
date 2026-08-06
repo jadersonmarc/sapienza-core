@@ -317,6 +317,11 @@ Os workflows já existem nos repos. Configure os secrets no GitHub:
 `CORE_URL` = `https://console.seudominio.com`, `MOTOR_URL` = `https://motor.seudominio.com`,
 `MOTION_URL` = URL pública do serviço de render (§5b), sem barra no fim.
 
+**Superadmin sem "SEM ACESSO".** O boot roda `superadmin:link` (idempotente): garante o tenant
+interno **Sapienza** e vincula todo superadmin como owner dele. Sem isso, um superadmin sem nenhum
+tenant acessível cai em "SEM ACESSO" (o console só renderiza com tenant ativo) — e num sistema ainda
+sem tenants não abriria nem o `/super`. Roda no CMD do container, hands-off.
+
 **Cupons de desconto.** Sobe sozinho no boot: a migration `0010` (`db:migrate`) e o catálogo de
 cupons (`coupons:seed`) rodam no CMD do container antes do `next start` — ambos idempotentes. O
 seed de lançamento traz `NORTEC2026` = R$200 no Combo Pro, 12 meses, 1 uso (para adicionar/editar
