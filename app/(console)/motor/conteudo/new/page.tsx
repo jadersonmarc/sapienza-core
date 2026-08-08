@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { Button } from "@/components/ui/button"
-import { motorContext, getChannels } from "@/lib/motor/client"
+import { motorContext, getChannels, getEditorConfig } from "@/lib/motor/client"
 import { tenantSubscriptions } from "@/lib/tenant/context"
 import type { ContentFormat } from "@/lib/motor/types"
 import { NewContentForm } from "../new-form"
@@ -22,6 +22,12 @@ export default async function NewContentPage() {
   if (connected.has("blog") || connected.has("wordpress") || connected.has("webhook")) formats.push("blog")
   if (connected.has("linkedin")) formats.push("linkedin")
   if (connected.has("instagram")) formats.push("instagram")
+  // Vídeo (motion) precisa de um destino: canal social nativo OU webhook (Fase 1).
+  const motionDestino = connected.has("instagram") || connected.has("linkedin") || connected.has("webhook")
+
+  // Identidade do agente é pré-requisito de QUALQUER criação (não há marca padrão).
+  const cfg = await getEditorConfig(ctx).catch(() => null)
+  const agentePronto = Boolean(cfg?.system_prompt?.trim())
 
   return (
     <div className="max-w-3xl space-y-6">
@@ -40,7 +46,15 @@ export default async function NewContentPage() {
         </p>
       </div>
 
-      {formats.length === 0 ? (
+      {!agentePronto ? (
+        <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+          Antes de criar peças, defina a <strong className="text-foreground">identidade da marca</strong> no{" "}
+          <Link href="/motor/agente" className="text-primary hover:underline">
+            Agente
+          </Link>{" "}
+          (voz, tom e temas). O conteúdo é sempre da sua marca — não há um padrão.
+        </div>
+      ) : formats.length === 0 && !motionDestino ? (
         <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
           Você ainda não conectou nenhum canal.{" "}
           <Link href="/motor/canais" className="text-primary hover:underline">
@@ -50,12 +64,34 @@ export default async function NewContentPage() {
         </div>
       ) : (
         <>
-          <NewContentForm formats={formats} />
-          {formats.includes("blog") && <BriefForm />}
+          {formats.length > 0 ? (
+            <>
+              <NewContentForm formats={formats} />
+              {formats.includes("blog") && <BriefForm />}
+            </>
+          ) : (
+            <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+              Nenhum canal de texto conectado.{" "}
+              <Link href="/motor/canais" className="text-primary hover:underline">
+                Conecte um canal
+              </Link>{" "}
+              para criar artigos/posts.
+            </div>
+          )}
+          {/* Motion só com destino de vídeo conectado (canal social ou webhook). */}
+          {motionEnabled && motionDestino && <MotionForm />}
+          {motionEnabled && !motionDestino && (
+            <div className="rounded-xl border border-border p-6 text-sm text-muted-foreground">
+              Para peças em <strong className="text-foreground">vídeo</strong>, conecte o Instagram, o
+              LinkedIn ou um{" "}
+              <Link href="/motor/canais" className="text-primary hover:underline">
+                Webhook
+              </Link>
+              .
+            </div>
+          )}
         </>
       )}
-
-      {motionEnabled && <MotionForm />}
 
       <Button asChild variant="outline">
         <Link href="/motor/conteudo">Voltar</Link>
