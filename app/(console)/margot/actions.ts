@@ -1,11 +1,14 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 import {
   margotContext,
   sendMessage,
   suggestReply,
   handoff,
+  clearConversation,
+  deleteConversation,
   putConfig,
   bindChannel,
   rotateWebhookSecret,
@@ -95,6 +98,27 @@ export async function handoffAction(formData: FormData): Promise<void> {
   }
 }
 
+// Limpa o histórico da conversa (mantém o lead) e a reinicia no bot. Owner/admin.
+export async function clearConversationAction(formData: FormData): Promise<void> {
+  const ctx = await margotContext()
+  const convId = String(formData.get("convId") ?? "")
+  if (!convId) return
+  await clearConversation(ctx, convId)
+  revalidatePath(`/margot/atendimento/${convId}`)
+  revalidatePath("/margot/atendimento")
+}
+
+// Apaga a conversa inteira (o contato/lead permanece). Volta para a caixa de
+// entrada, pois a página da conversa deixa de existir. Owner/admin.
+export async function deleteConversationAction(formData: FormData): Promise<void> {
+  const ctx = await margotContext()
+  const convId = String(formData.get("convId") ?? "")
+  if (!convId) return
+  await deleteConversation(ctx, convId)
+  revalidatePath("/margot/atendimento")
+  redirect("/margot/atendimento")
+}
+
 export async function saveConfigAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const ctx = await margotContext()
@@ -105,6 +129,7 @@ export async function saveConfigAction(_prev: ActionState, formData: FormData): 
       fallback: String(formData.get("fallback") ?? ""),
       max_tokens: Number(formData.get("max_tokens") ?? 0) || 0,
       ai_model: String(formData.get("ai_model") ?? ""),
+      handoff_max: Math.max(0, Number(formData.get("handoff_max") ?? 0) || 0),
     } as AgentConfig
     await putConfig(ctx, cfg)
     revalidatePath("/margot/configuracao")

@@ -57,18 +57,37 @@ export function ConfigForm({ cfg }: { cfg: AgentConfig }) {
         <input id="fallback" name="fallback" defaultValue={cfg.fallback} className={field} />
       </div>
 
-      <div className="space-y-1 sm:max-w-[50%]">
-        <label className={label} htmlFor="max_tokens">
-          Máx. tokens
-        </label>
-        <input
-          id="max_tokens"
-          name="max_tokens"
-          type="number"
-          min={1}
-          defaultValue={cfg.max_tokens}
-          className={field}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className={label} htmlFor="max_tokens">
+            Máx. tokens
+          </label>
+          <input
+            id="max_tokens"
+            name="max_tokens"
+            type="number"
+            min={1}
+            defaultValue={cfg.max_tokens}
+            className={field}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className={label} htmlFor="handoff_max">
+            Passar para humano após
+          </label>
+          <input
+            id="handoff_max"
+            name="handoff_max"
+            type="number"
+            min={0}
+            defaultValue={cfg.handoff_max}
+            className={field}
+          />
+          <p className="text-xs text-muted-foreground">
+            Nº de mensagens da conversa (na sessão atual) antes de acionar um humano
+            automaticamente. Use <strong>0</strong> para nunca passar sozinho.
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">

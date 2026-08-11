@@ -109,6 +109,16 @@ export async function handoff(ctx: MargotCtx, convId: string, mode: "bot" | "hum
   })
 }
 
+/** Limpa o histórico da conversa (mantém o lead) e a reinicia no bot. */
+export async function clearConversation(ctx: MargotCtx, convId: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/conversations/${convId}/clear`, { method: "POST" })
+}
+
+/** Apaga a conversa inteira (o contato/lead permanece no CRM). */
+export async function deleteConversation(ctx: MargotCtx, convId: string) {
+  return call<{ ok: boolean }>(ctx, `/api/v1/conversations/${convId}`, { method: "DELETE" })
+}
+
 export async function getConfig(ctx: MargotCtx): Promise<AgentConfig> {
   return call<AgentConfig>(ctx, "/api/v1/config")
 }

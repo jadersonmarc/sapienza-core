@@ -6,6 +6,10 @@ export type Conversation = {
   contact_name: string | null
   mode: "bot" | "human"
   status: string
+  // Destaque no console: a conversa precisa de um humano (handoff ou agendamento),
+  // com o motivo. Setado pelo pipeline; some ao devolver a conversa ao bot.
+  needs_attention: boolean
+  attention_reason: string
   last_message_at: string | null
 }
 
@@ -72,6 +76,8 @@ export type AgentConfig = {
   fallback: string
   max_tokens: number
   ai_model: string
+  // Passar p/ humano após N mensagens da sessão atual do bot; 0 = nunca automático.
+  handoff_max: number
   driver: string
   dedicated_number_confirmed: boolean
 }

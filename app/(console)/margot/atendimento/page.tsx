@@ -48,12 +48,24 @@ export default async function AtendimentoPage() {
             </thead>
             <tbody>
               {conversations.map((c) => (
-                <tr key={c.id} className="border-t border-border hover:bg-muted/50">
+                <tr
+                  key={c.id}
+                  className={`border-t border-border hover:bg-muted/50 ${
+                    c.needs_attention ? "bg-amber-500/5" : ""
+                  }`}
+                >
                   <td className="px-4 py-2">
-                    <Link href={`/margot/atendimento/${c.id}`} className="hover:underline">
-                      {c.contact_name || c.contact_phone}
-                    </Link>
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">{c.contact_phone}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link href={`/margot/atendimento/${c.id}`} className="hover:underline">
+                        {c.contact_name || c.contact_phone}
+                      </Link>
+                      <span className="font-mono text-xs text-muted-foreground">{c.contact_phone}</span>
+                      {c.needs_attention && (
+                        <span className="rounded border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                          ⚠ {c.attention_reason || "Precisa de atenção"}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2">
                     <span
