@@ -111,6 +111,33 @@ export function buildEmail(type: string, payload: Payload, to: string): EmailMes
         button(`${CONSOLE_URL}/motor/conteudo`, "Abrir conteúdo")
       return { to, subject: "Falha ao publicar em um canal", html: layout("Falha na publicação", body) }
     }
+    case "HandoffTriggered": {
+      // A Atendente passou uma conversa para atendimento humano.
+      const convId = str(payload.conversation_id)
+      const reason = str(payload.reason)
+      const motivo =
+        reason === "max_mensagens"
+          ? "a conversa atingiu o limite de mensagens configurado"
+          : reason
+            ? `motivo: ${reason}`
+            : "uma regra de atendimento foi acionada"
+      const link = convId ? `${CONSOLE_URL}/margot/atendimento/${convId}` : `${CONSOLE_URL}/margot/atendimento`
+      const body =
+        p(`A Margot Atendente passou uma conversa para um humano porque ${motivo}.`) +
+        p("Assuma o atendimento no console para não deixar o cliente esperando.") +
+        button(link, "Abrir conversa")
+      return { to, subject: "Uma conversa precisa de um humano", html: layout("Atendimento humano solicitado", body) }
+    }
+    case "AppointmentSignaled": {
+      // A IA confirmou um horário/agendamento com o cliente.
+      const convId = str(payload.conversation_id)
+      const link = convId ? `${CONSOLE_URL}/margot/atendimento/${convId}` : `${CONSOLE_URL}/margot/atendimento`
+      const body =
+        p("A Margot Atendente confirmou um horário com um cliente.") +
+        p("Confira a conversa para registrar o agendamento na sua agenda.") +
+        button(link, "Ver conversa")
+      return { to, subject: "Novo agendamento pela Margot", html: layout("Agendamento confirmado", body) }
+    }
     default:
       return null
   }
@@ -127,4 +154,6 @@ export const EMAIL_EVENT_TYPES = new Set<string>([
   "PasswordResetRequested",
   "EmailVerificationRequested",
   "ContentPublishFailed",
+  "HandoffTriggered",
+  "AppointmentSignaled",
 ])
