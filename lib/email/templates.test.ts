@@ -29,4 +29,12 @@ describe("buildEmail — alertas da Margot", () => {
     expect(EMAIL_EVENT_TYPES.has("HandoffTriggered")).toBe(true)
     expect(EMAIL_EVENT_TYPES.has("AppointmentSignaled")).toBe(true)
   })
+
+  it("ClipsExpiring avisa da expiração com link para os Clipes", () => {
+    const msg = buildEmail("ClipsExpiring", { clips: 8 }, "dono@tenant.com")
+    expect(msg).not.toBeNull()
+    expect(msg?.subject).toMatch(/expirar/i)
+    expect(msg?.html).toContain("/motor/clipes")
+    expect(EMAIL_EVENT_TYPES.has("ClipsExpiring")).toBe(true)
+  })
 })

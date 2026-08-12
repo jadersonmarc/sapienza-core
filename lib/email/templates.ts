@@ -128,6 +128,15 @@ export function buildEmail(type: string, payload: Payload, to: string): EmailMes
         button(link, "Abrir conversa")
       return { to, subject: "Uma conversa precisa de um humano", html: layout("Atendimento humano solicitado", body) }
     }
+    case "ClipsExpiring": {
+      // Os clipes de um vídeo serão removidos em breve (retenção 60d da Editora).
+      const clips = str(payload.clips)
+      const body =
+        p(`Os clipes gerados de um dos seus vídeos serão removidos em breve${clips ? ` (${clips} clipe(s))` : ""}.`) +
+        p("Baixe ou publique o que ainda quiser guardar antes da expiração.") +
+        button(`${CONSOLE_URL}/motor/clipes`, "Abrir Clipes")
+      return { to, subject: "Seus clipes vão expirar em breve", html: layout("Clipes a expirar", body) }
+    }
     case "AppointmentSignaled": {
       // A IA confirmou um horário/agendamento com o cliente.
       const convId = str(payload.conversation_id)
@@ -156,4 +165,5 @@ export const EMAIL_EVENT_TYPES = new Set<string>([
   "ContentPublishFailed",
   "HandoffTriggered",
   "AppointmentSignaled",
+  "ClipsExpiring",
 ])
