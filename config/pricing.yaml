@@ -42,6 +42,8 @@ produtos:
       storage_mb: { start: 500, pro: 2000, scale: 5000 }  # cota da biblioteca de mídia por tier
       motion_enabled: { start: 0, pro: 1, scale: 1 }      # peça em movimento (vídeo): Pro e Premium (=scale)
       motion_weight: 1                                     # peso da peça de motion na cota de peça publicada (lançamento = 1)
+      clipper_enabled: { start: 1, pro: 1, scale: 1 }     # Clipes Inteligentes (corte de vídeo longo): todos os planos
+      clipper_hours: { start: 2, pro: 8, scale: 25 }      # LIMITE OPERACIONAL de horas de vídeo-fonte/mês (não é fatura; protege a fila) — a calibrar
 # Combos por tier: assinar Margot + Motor no MESMO tier, numa recorrência única a
 # preço reduzido. `mensal` = preço do combo; `economia` = desconto vs. soma dos avulsos
 # (mensal + economia DEVE bater com margot[tier].mensal + motor[tier].mensal).
