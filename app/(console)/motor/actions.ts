@@ -22,11 +22,27 @@ import {
   applyRecommendation,
   acceptProposal,
   discardProposal,
+  createClipFromUrl,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string; message?: string }
+
+// Clipes Inteligentes: cria uma fonte por URL. O worker processa em segundo plano;
+// a página faz polling do status.
+export async function createClipFromUrlAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const url = String(formData.get("url") ?? "").trim()
+  if (!url) return { error: "cole a URL de um vídeo" }
+  try {
+    const ctx = await motorContext()
+    await createClipFromUrl(ctx, url)
+    revalidatePath("/motor/clipes")
+    return { ok: true, message: "Vídeo na fila — os clipes aparecem aqui quando ficarem prontos." }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao enfileirar o vídeo" }
+  }
+}
 
 export async function createContentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const prompt = String(formData.get("prompt") ?? "").trim()

@@ -57,6 +57,7 @@ export default async function ConsoleLayout({ children }: { children: React.Reac
               { href: "/motor", label: "Visão geral", exact: true },
               { href: "/motor/agente", label: "Agente" },
               { href: "/motor/conteudo", label: "Conteúdo" },
+              { href: "/motor/clipes", label: "Clipes" },
               { href: "/motor/midia", label: "Mídia" },
               { href: "/motor/calendario", label: "Calendário" },
               { href: "/motor/canais", label: "Canais" },

@@ -126,3 +126,28 @@ export type SetupStatus = {
   connected: Platform[]
   available: { platform: Platform; requires: string[] }[]
 }
+
+// ── Clipes Inteligentes ───────────────────────────────────────────────────────
+export type ClipSource = {
+  id: string
+  kind: "upload" | "url"
+  origin: string
+  status: string // queued|downloading|probing|extracting_audio|transcribing|analyzing|generating|done|error
+  error: string | null
+  duration_seconds: number | null
+  clips_count: number
+  created_at: string
+}
+
+export type ClipItemView = {
+  id: string
+  slug: string
+  title: string | null
+  status: string
+  render_status: string | null
+  clip_aspect: string | null
+  video_url: string | null
+  score: number | null
+}
+
+export type ClipHoursQuota = { usedMinutes: number; limitMinutes: number; remainingMinutes: number }

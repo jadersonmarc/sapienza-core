@@ -6,6 +6,9 @@ import type {
   AnalysesResult,
   AnalysisType,
   ChannelsStatus,
+  ClipHoursQuota,
+  ClipItemView,
+  ClipSource,
   ContentDetail,
   ContentFormat,
   ContentItem,
@@ -447,4 +450,29 @@ export async function fetchPreviewImage(search: URLSearchParams): Promise<Respon
     if (v) allowed.set(k, v)
   }
   return fetch(`${baseUrl()}/api/og?${allowed.toString()}`, { cache: "no-store" })
+}
+
+// ── Clipes Inteligentes ───────────────────────────────────────────────────────
+
+/** Lista as fontes de vídeo do tenant + a cota de horas. */
+export async function listClipSources(
+  ctx: MotorCtx,
+): Promise<{ sources: ClipSource[]; quota: ClipHoursQuota }> {
+  return call<{ sources: ClipSource[]; quota: ClipHoursQuota }>(ctx, "/api/v1/content/clip")
+}
+
+/** Cria uma fonte por URL (o worker baixa, transcreve, analisa e gera os clipes). */
+export async function createClipFromUrl(ctx: MotorCtx, url: string): Promise<{ id: string }> {
+  return call<{ id: string }>(ctx, "/api/v1/content/clip", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  })
+}
+
+/** Detalhe da fonte + seus clipes (grade ranqueada por score). */
+export async function getClipSource(
+  ctx: MotorCtx,
+  id: string,
+): Promise<{ source: ClipSource; clips: ClipItemView[] }> {
+  return call<{ source: ClipSource; clips: ClipItemView[] }>(ctx, `/api/v1/content/clip/${id}`)
 }
