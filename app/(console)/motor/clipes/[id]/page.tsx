@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getClipSource, MotorError } from "@/lib/motor/client"
 import type { ClipItemView } from "@/lib/motor/types"
+import { ClipEditor } from "./clip-editor"
 
 const RENDER: Record<string, string> = {
   preparing: "preparando",
@@ -47,6 +48,8 @@ function ClipCard({ clip }: { clip: ClipItemView }) {
           Abrir / publicar
         </Link>
       </div>
+      {/* Editor-lite só antes de publicar/agendar. */}
+      {(clip.status === "draft" || clip.status === "in_review") && <ClipEditor clip={clip} />}
     </div>
   )
 }

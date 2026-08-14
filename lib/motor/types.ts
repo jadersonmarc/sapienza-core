@@ -148,6 +148,9 @@ export type ClipItemView = {
   clip_aspect: string | null
   video_url: string | null
   score: number | null
+  in_ms: number | null
+  out_ms: number | null
+  brand_on: boolean | null
 }
 
 export type ClipHoursQuota = { usedMinutes: number; limitMinutes: number; remainingMinutes: number }

@@ -476,3 +476,21 @@ export async function getClipSource(
 ): Promise<{ source: ClipSource; clips: ClipItemView[] }> {
   return call<{ source: ClipSource; clips: ClipItemView[] }>(ctx, `/api/v1/content/clip/${id}`)
 }
+
+/** Editor-lite: reajusta o corte/aspecto/marca/legenda de um clipe e re-renderiza. */
+export async function updateClip(
+  ctx: MotorCtx,
+  id: string,
+  patch: {
+    inMs?: number
+    outMs?: number
+    aspect?: "9x16" | "16x9"
+    brandOn?: boolean
+    captionPosition?: "bottom" | "center" | "top"
+  },
+): Promise<{ ok: boolean }> {
+  return call<{ ok: boolean }>(ctx, `/api/v1/content/clip/item/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  })
+}

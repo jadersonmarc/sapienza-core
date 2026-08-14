@@ -23,11 +23,32 @@ import {
   acceptProposal,
   discardProposal,
   createClipFromUrl,
+  updateClip,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string; message?: string }
+
+// Editor-lite: reajusta o corte de um clipe e re-renderiza.
+export async function editClipAction(
+  id: string,
+  patch: {
+    inMs?: number
+    outMs?: number
+    aspect?: "9x16" | "16x9"
+    brandOn?: boolean
+    captionPosition?: "bottom" | "center" | "top"
+  },
+): Promise<{ error?: string }> {
+  try {
+    const ctx = await motorContext()
+    await updateClip(ctx, id, patch)
+    return {}
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao ajustar o clipe" }
+  }
+}
 
 // Clipes Inteligentes: cria uma fonte por URL. O worker processa em segundo plano;
 // a página faz polling do status.
