@@ -494,3 +494,17 @@ export async function updateClip(
     body: JSON.stringify(patch),
   })
 }
+
+/** Corrige um termo (nome/sigla/jargão) e propaga p/ a transcrição e todos os
+ *  clipes ainda não publicados do vídeo (re-renderiza). */
+export async function correctClipTranscript(
+  ctx: MotorCtx,
+  sourceId: string,
+  from: string,
+  to: string,
+): Promise<{ corrected: number; requeued: number }> {
+  return call<{ corrected: number; requeued: number }>(ctx, `/api/v1/content/clip/${sourceId}/correct`, {
+    method: "POST",
+    body: JSON.stringify({ from, to }),
+  })
+}

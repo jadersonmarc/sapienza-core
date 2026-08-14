@@ -3,6 +3,7 @@ import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, getClipSource, MotorError } from "@/lib/motor/client"
 import type { ClipItemView } from "@/lib/motor/types"
 import { ClipEditor } from "./clip-editor"
+import { CorrectionForm } from "./correction-form"
 
 const RENDER: Record<string, string> = {
   preparing: "preparando",
@@ -89,11 +90,14 @@ export default async function ClipSourcePage({ params }: { params: Promise<{ id:
           {status === "error" ? "O processamento falhou." : "Ainda processando — os clipes aparecem aqui quando ficarem prontos."}
         </p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {clips.map((c) => (
-            <ClipCard key={c.id} clip={c} />
-          ))}
-        </div>
+        <>
+          <CorrectionForm sourceId={id} />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {clips.map((c) => (
+              <ClipCard key={c.id} clip={c} />
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

@@ -24,11 +24,27 @@ import {
   discardProposal,
   createClipFromUrl,
   updateClip,
+  correctClipTranscript,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string; message?: string }
+
+// Corrige um termo na transcrição e propaga para os clipes do vídeo.
+export async function correctTranscriptAction(
+  sourceId: string,
+  from: string,
+  to: string,
+): Promise<{ error?: string; corrected?: number; requeued?: number }> {
+  if (!from.trim() || !to.trim()) return { error: "preencha a palavra errada e a correção" }
+  try {
+    const ctx = await motorContext()
+    return await correctClipTranscript(ctx, sourceId, from.trim(), to.trim())
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao corrigir" }
+  }
+}
 
 // Editor-lite: reajusta o corte de um clipe e re-renderiza.
 export async function editClipAction(
