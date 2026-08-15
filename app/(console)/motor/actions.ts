@@ -25,11 +25,27 @@ import {
   createClipFromUrl,
   updateClip,
   correctClipTranscript,
+  importClipFromConnector,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string; message?: string }
+
+// Importa um arquivo da conta de nuvem conectada (Drive/Dropbox) para a esteira.
+export async function importFromConnectorAction(
+  provider: string,
+  fileRef: string,
+): Promise<{ error?: string; ok?: boolean }> {
+  if (!fileRef.trim()) return { error: "informe o ID/caminho do arquivo" }
+  try {
+    const ctx = await motorContext()
+    await importClipFromConnector(ctx, provider, fileRef.trim())
+    return { ok: true }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao importar da nuvem" }
+  }
+}
 
 // Corrige um termo na transcrição e propaga para os clipes do vídeo.
 export async function correctTranscriptAction(

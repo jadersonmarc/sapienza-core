@@ -454,11 +454,40 @@ export async function fetchPreviewImage(search: URLSearchParams): Promise<Respon
 
 // ── Clipes Inteligentes ───────────────────────────────────────────────────────
 
-/** Lista as fontes de vídeo do tenant + a cota de horas. */
+export type ClipConnectors = { connected: string[]; available: string[] }
+
+/** Lista as fontes de vídeo do tenant + cota de horas + conectores de nuvem. */
 export async function listClipSources(
   ctx: MotorCtx,
-): Promise<{ sources: ClipSource[]; quota: ClipHoursQuota }> {
-  return call<{ sources: ClipSource[]; quota: ClipHoursQuota }>(ctx, "/api/v1/content/clip")
+): Promise<{ sources: ClipSource[]; quota: ClipHoursQuota; connectors: ClipConnectors }> {
+  return call<{ sources: ClipSource[]; quota: ClipHoursQuota; connectors: ClipConnectors }>(ctx, "/api/v1/content/clip")
+}
+
+/** URL de autorização OAuth de um conector de nuvem (null se o app não está configurado). */
+export async function getClipConnectorUrl(ctx: MotorCtx, provider: string, state: string): Promise<string | null> {
+  try {
+    const r = await call<{ url: string }>(ctx, `/api/v1/content/clip/connect?provider=${provider}&state=${state}`)
+    return r.url
+  } catch (e) {
+    if (e instanceof MotorError && e.status === 503) return null
+    throw e
+  }
+}
+
+/** Troca o code do callback OAuth por token (o motor grava cifrado). */
+export async function exchangeClipConnector(ctx: MotorCtx, provider: string, code: string): Promise<void> {
+  await call<{ ok: boolean }>(ctx, "/api/v1/content/clip/connect", {
+    method: "POST",
+    body: JSON.stringify({ provider, code }),
+  })
+}
+
+/** Importa um arquivo da conta de nuvem conectada para a esteira. */
+export async function importClipFromConnector(ctx: MotorCtx, provider: string, fileRef: string): Promise<{ id: string }> {
+  return call<{ id: string }>(ctx, "/api/v1/content/clip/import", {
+    method: "POST",
+    body: JSON.stringify({ provider, fileRef }),
+  })
 }
 
 /** Cria uma fonte por URL (o worker baixa, transcreve, analisa e gera os clipes). */

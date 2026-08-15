@@ -2,7 +2,9 @@ import Link from "next/link"
 import { Eyebrow } from "@/components/eyebrow"
 import { motorContext, listClipSources, MotorError } from "@/lib/motor/client"
 import type { ClipSource, ClipHoursQuota } from "@/lib/motor/types"
+import type { ClipConnectors } from "@/lib/motor/client"
 import { ClipImportPanel } from "./import-panel"
+import { ConnectorsPanel } from "./connectors-panel"
 
 // Rótulos pt-BR dos estágios da esteira (clip_sources.status).
 const STAGE: Record<string, { label: string; done?: boolean; error?: boolean }> = {
@@ -45,11 +47,13 @@ export default async function ClipesPage() {
   const ctx = await motorContext()
   let sources: ClipSource[] = []
   let quota: ClipHoursQuota | null = null
+  let connectors: ClipConnectors = { connected: [], available: [] }
   let unavailable: string | null = null
   try {
     const r = await listClipSources(ctx)
     sources = r.sources
     quota = r.quota
+    connectors = r.connectors
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
@@ -75,6 +79,8 @@ export default async function ClipesPage() {
       {quota && <QuotaBar q={quota} />}
 
       <ClipImportPanel exhausted={!!quota && quota.remainingMinutes <= 0} autoRefresh={processing} />
+
+      <ConnectorsPanel connectors={connectors} />
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>
