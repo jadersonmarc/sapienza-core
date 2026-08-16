@@ -78,6 +78,9 @@ export type AgentConfig = {
   ai_model: string
   // Passar p/ humano após N mensagens da sessão atual do bot; 0 = nunca automático.
   handoff_max: number
+  // Mensagem-ponte enviada ao cliente NO handoff automático (canned, não fatura).
+  // Vazio = não envia (o cliente fica em silêncio até o humano assumir).
+  handoff_message: string
   driver: string
   dedicated_number_confirmed: boolean
 }

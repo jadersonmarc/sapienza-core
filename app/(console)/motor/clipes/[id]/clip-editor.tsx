@@ -7,7 +7,7 @@ import type { ClipItemView } from "@/lib/motor/types"
 
 /** Editor-lite de um clipe: ajusta início/fim (s), aspecto, marca e posição da
  *  legenda; salva e re-renderiza. Só aparece antes de publicar. */
-export function ClipEditor({ clip }: { clip: ClipItemView }) {
+export function ClipEditor({ clip, can4k }: { clip: ClipItemView; can4k: boolean }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, start] = useTransition()
@@ -17,6 +17,7 @@ export function ClipEditor({ clip }: { clip: ClipItemView }) {
   const [outS, setOutS] = useState(((clip.out_ms ?? 0) / 1000).toFixed(1))
   const [aspect, setAspect] = useState<"9x16" | "16x9">(clip.clip_aspect === "16x9" ? "16x9" : "9x16")
   const [brandOn, setBrandOn] = useState(clip.brand_on ?? true)
+  const [hd, setHd] = useState(clip.hd ?? false)
   const [caption, setCaption] = useState<"bottom" | "center" | "top">("bottom")
 
   const field = "w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
@@ -42,7 +43,7 @@ export function ClipEditor({ clip }: { clip: ClipItemView }) {
       return
     }
     start(async () => {
-      const res = await editClipAction(clip.id, { inMs, outMs, aspect, brandOn, captionPosition: caption })
+      const res = await editClipAction(clip.id, { inMs, outMs, aspect, brandOn, captionPosition: caption, hd })
       if (res.error) {
         setErr(res.error)
         return
@@ -85,6 +86,12 @@ export function ClipEditor({ clip }: { clip: ClipItemView }) {
         <input type="checkbox" checked={brandOn} onChange={(e) => setBrandOn(e.target.checked)} />
         Aplicar minha marca (logo)
       </label>
+      {can4k && (
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <input type="checkbox" checked={hd} onChange={(e) => setHd(e.target.checked)} />
+          Exportar em 4K (Premium)
+        </label>
+      )}
       {err && <p className="text-xs text-destructive">{err}</p>}
       <div className="flex items-center gap-2">
         <button

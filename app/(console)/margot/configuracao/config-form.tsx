@@ -90,6 +90,24 @@ export function ConfigForm({ cfg }: { cfg: AgentConfig }) {
         </div>
       </div>
 
+      <div className="space-y-1">
+        <label className={label} htmlFor="handoff_message">
+          Mensagem ao cliente no handoff
+        </label>
+        <textarea
+          id="handoff_message"
+          name="handoff_message"
+          rows={2}
+          defaultValue={cfg.handoff_message}
+          className={field}
+        />
+        <p className="text-xs text-muted-foreground">
+          Enviada automaticamente ao cliente no momento em que a conversa é passada
+          para humano (não fatura). Evita silêncio até um atendente assumir. Deixe
+          vazio para não enviar nada.
+        </p>
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"

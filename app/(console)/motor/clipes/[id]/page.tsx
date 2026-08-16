@@ -21,7 +21,7 @@ const STATUS: Record<string, string> = {
   archived: "arquivado",
 }
 
-function ClipCard({ clip }: { clip: ClipItemView }) {
+function ClipCard({ clip, can4k }: { clip: ClipItemView; can4k: boolean }) {
   const rendered = clip.render_status === "done"
   return (
     <div className="flex flex-col gap-2 rounded-xl border border-border p-3">
@@ -50,7 +50,7 @@ function ClipCard({ clip }: { clip: ClipItemView }) {
         </Link>
       </div>
       {/* Editor-lite só antes de publicar/agendar. */}
-      {(clip.status === "draft" || clip.status === "in_review") && <ClipEditor clip={clip} />}
+      {(clip.status === "draft" || clip.status === "in_review") && <ClipEditor clip={clip} can4k={can4k} />}
     </div>
   )
 }
@@ -61,12 +61,14 @@ export default async function ClipSourcePage({ params }: { params: Promise<{ id:
   let clips: ClipItemView[] = []
   let origin = ""
   let status = ""
+  let can4k = false
   let unavailable: string | null = null
   try {
     const r = await getClipSource(ctx, id)
     clips = r.clips
     origin = r.source.origin
     status = r.source.status
+    can4k = r.can4k
   } catch (e) {
     unavailable = e instanceof MotorError ? `${e.status} — ${e.message}` : "serviço indisponível"
   }
@@ -94,7 +96,7 @@ export default async function ClipSourcePage({ params }: { params: Promise<{ id:
           <CorrectionForm sourceId={id} />
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             {clips.map((c) => (
-              <ClipCard key={c.id} clip={c} />
+              <ClipCard key={c.id} clip={c} can4k={can4k} />
             ))}
           </div>
         </>

@@ -10,13 +10,21 @@ import { clearConversationAction, deleteConversationAction } from "../../actions
 export function ConversationDangerZone({ convId }: { convId: string }) {
   const [pending, startTransition] = useTransition()
   const [confirming, setConfirming] = useState<"clear" | "delete" | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   const run = (kind: "clear" | "delete") =>
     startTransition(async () => {
+      setError(null)
       const fd = new FormData()
       fd.set("convId", convId)
-      if (kind === "clear") await clearConversationAction(fd)
-      else await deleteConversationAction(fd)
+      // Delete sucedido faz redirect no server (nunca resolve com estado); só o clear
+      // e o caminho de erro voltam com { ok } | { error }, e o UI exibe a mensagem.
+      const state =
+        kind === "clear" ? await clearConversationAction(fd) : await deleteConversationAction(fd)
+      if (state?.error) {
+        setError(state.error)
+        return
+      }
       setConfirming(null)
     })
 
@@ -75,6 +83,11 @@ export function ConversationDangerZone({ convId }: { convId: string }) {
             Cancelar
           </button>
         </div>
+      )}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
       )}
     </div>
   )

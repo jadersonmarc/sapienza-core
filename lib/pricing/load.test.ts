@@ -21,7 +21,7 @@ describe("loadPricing", () => {
       ["pro", 700, 1500],
       ["scale", 1200, 5000],
     ])
-    expect(margot.regras.handoff_max_mensagens).toBe(15)
+    expect(margot.regras.handoff_max_mensagens).toBe(40)
     // O canal default (Evolution) não tem janela grátis / disparo de marketing.
     expect(margot.regras.janela_servico_meta_gratuita).toBeUndefined()
     expect(margot.regras.disparo_ativo_marketing).toBeUndefined()

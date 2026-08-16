@@ -151,6 +151,7 @@ export type ClipItemView = {
   in_ms: number | null
   out_ms: number | null
   brand_on: boolean | null
+  hd: boolean | null
 }
 
 export type ClipHoursQuota = { usedMinutes: number; limitMinutes: number; remainingMinutes: number }

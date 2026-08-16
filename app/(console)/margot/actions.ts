@@ -99,22 +99,34 @@ export async function handoffAction(formData: FormData): Promise<void> {
 }
 
 // Limpa o histórico da conversa (mantém o lead) e a reinicia no bot. Owner/admin.
-export async function clearConversationAction(formData: FormData): Promise<void> {
-  const ctx = await margotContext()
+// Retorna ActionState para o cliente mostrar a mensagem em vez de engolir em silêncio.
+export async function clearConversationAction(formData: FormData): Promise<ActionState> {
   const convId = String(formData.get("convId") ?? "")
-  if (!convId) return
-  await clearConversation(ctx, convId)
+  if (!convId) return { error: "conversa inválida" }
+  try {
+    const ctx = await margotContext()
+    await clearConversation(ctx, convId)
+  } catch (e) {
+    console.error("[margot] clearConversation falhou:", e)
+    return { error: e instanceof MargotError ? `${e.status} — ${e.message}` : "falha ao limpar conversa" }
+  }
   revalidatePath(`/margot/atendimento/${convId}`)
   revalidatePath("/margot/atendimento")
+  return { ok: true }
 }
 
 // Apaga a conversa inteira (o contato/lead permanece). Volta para a caixa de
-// entrada, pois a página da conversa deixa de existir. Owner/admin.
-export async function deleteConversationAction(formData: FormData): Promise<void> {
-  const ctx = await margotContext()
+// entrada — o redirect fica FORA do try/catch para o NEXT_REDIRECT subir intacto.
+export async function deleteConversationAction(formData: FormData): Promise<ActionState> {
   const convId = String(formData.get("convId") ?? "")
-  if (!convId) return
-  await deleteConversation(ctx, convId)
+  if (!convId) return { error: "conversa inválida" }
+  try {
+    const ctx = await margotContext()
+    await deleteConversation(ctx, convId)
+  } catch (e) {
+    console.error("[margot] deleteConversation falhou:", e)
+    return { error: e instanceof MargotError ? `${e.status} — ${e.message}` : "falha ao apagar conversa" }
+  }
   revalidatePath("/margot/atendimento")
   redirect("/margot/atendimento")
 }
@@ -130,6 +142,7 @@ export async function saveConfigAction(_prev: ActionState, formData: FormData): 
       max_tokens: Number(formData.get("max_tokens") ?? 0) || 0,
       ai_model: String(formData.get("ai_model") ?? ""),
       handoff_max: Math.max(0, Number(formData.get("handoff_max") ?? 0) || 0),
+      handoff_message: String(formData.get("handoff_message") ?? "").trim(),
     } as AgentConfig
     await putConfig(ctx, cfg)
     revalidatePath("/margot/configuracao")

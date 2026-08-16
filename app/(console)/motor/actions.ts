@@ -71,6 +71,7 @@ export async function editClipAction(
     aspect?: "9x16" | "16x9"
     brandOn?: boolean
     captionPosition?: "bottom" | "center" | "top"
+    hd?: boolean
   },
 ): Promise<{ error?: string }> {
   try {
