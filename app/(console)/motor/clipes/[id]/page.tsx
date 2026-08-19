@@ -4,6 +4,7 @@ import { motorContext, getClipSource, MotorError } from "@/lib/motor/client"
 import type { ClipItemView } from "@/lib/motor/types"
 import { ClipEditor } from "./clip-editor"
 import { CorrectionForm } from "./correction-form"
+import { DeleteClipButton, DeleteSourceButton } from "./delete-controls"
 
 const RENDER: Record<string, string> = {
   preparing: "preparando",
@@ -45,9 +46,12 @@ function ClipCard({ clip, can4k }: { clip: ClipItemView; can4k: boolean }) {
       )}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>{STATUS[clip.status] ?? clip.status}</span>
-        <Link href={`/motor/conteudo/${clip.id}`} className="font-medium text-primary hover:underline">
-          Abrir / publicar
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href={`/motor/conteudo/${clip.id}`} className="font-medium text-primary hover:underline">
+            Abrir / publicar
+          </Link>
+          <DeleteClipButton clipId={clip.id} />
+        </div>
       </div>
       {/* Editor-lite só antes de publicar/agendar. */}
       {(clip.status === "draft" || clip.status === "in_review") && <ClipEditor clip={clip} can4k={can4k} />}
@@ -83,6 +87,7 @@ export default async function ClipSourcePage({ params }: { params: Promise<{ id:
           · Vídeo
         </Eyebrow>
         <h1 className="font-display text-2xl font-semibold tracking-tight break-words">{origin || "Vídeo"}</h1>
+        {!unavailable && <DeleteSourceButton sourceId={id} clipCount={clips.length} />}
       </div>
 
       {unavailable ? (

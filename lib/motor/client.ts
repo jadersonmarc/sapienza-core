@@ -538,3 +538,13 @@ export async function correctClipTranscript(
     body: JSON.stringify({ from, to }),
   })
 }
+
+/** Exclui UM clipe (registro + MP4 no R2). Local — não despublica da rede. */
+export async function deleteClip(ctx: MotorCtx, id: string): Promise<{ ok: boolean }> {
+  return call<{ ok: boolean }>(ctx, `/api/v1/content/clip/item/${id}`, { method: "DELETE" })
+}
+
+/** Exclui o vídeo-fonte em cascata (clipes + bruto + fonte). Local — não despublica. */
+export async function deleteClipVideo(ctx: MotorCtx, sourceId: string): Promise<{ ok: boolean; deletedClips: number }> {
+  return call<{ ok: boolean; deletedClips: number }>(ctx, `/api/v1/content/clip/${sourceId}`, { method: "DELETE" })
+}

@@ -26,6 +26,8 @@ import {
   updateClip,
   correctClipTranscript,
   importClipFromConnector,
+  deleteClip,
+  deleteClipVideo,
   MotorError,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
@@ -60,6 +62,29 @@ export async function correctTranscriptAction(
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao corrigir" }
   }
+}
+
+// Exclui um clipe (local; não despublica). O componente faz refresh depois.
+export async function deleteClipAction(id: string): Promise<{ error?: string }> {
+  try {
+    const ctx = await motorContext()
+    await deleteClip(ctx, id)
+    return {}
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao excluir o clipe" }
+  }
+}
+
+// Exclui o vídeo-fonte + clipes em cascata; volta para a lista de Clipes.
+export async function deleteClipVideoAction(sourceId: string): Promise<{ error?: string }> {
+  try {
+    const ctx = await motorContext()
+    await deleteClipVideo(ctx, sourceId)
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao excluir o vídeo" }
+  }
+  revalidatePath("/motor/clipes")
+  redirect("/motor/clipes")
 }
 
 // Editor-lite: reajusta o corte de um clipe e re-renderiza.
