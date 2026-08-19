@@ -25,6 +25,9 @@ export type ContentItem = {
   // Motion (peça em movimento / vídeo). is_motion marca a peça; render_* é o estado
   // do serviço de render; video_url é o MP4 pronto (R2).
   is_motion: boolean
+  // Clipe (corte de vídeo). Regenerar não se aplica; brief=prompt/brief original.
+  is_clip?: boolean
+  brief?: string | null
   motion_preset: string | null
   motion_aspect: string | null
   video_url: string | null

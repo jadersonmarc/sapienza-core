@@ -141,11 +141,16 @@ function RejectForm({ id }: { id: string }) {
 }
 
 /** Regenera o rascunho via IA (limite de 2/peça; a 3ª retorna 409). */
-function RegenerateForm({ id, disabled }: { id: string; disabled: boolean }) {
+function RegenerateForm({ id, disabled, hasBrief }: { id: string; disabled: boolean; hasBrief: boolean }) {
   const [state, action, pending] = useActionState(regenerateAction, initial)
   return (
     <form action={action} className="flex flex-col gap-2 rounded-xl border border-border p-4">
       <label className="text-sm font-medium">Regenerar rascunho</label>
+      {!hasBrief && (
+        <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-xs">
+          Esta peça é anterior ao recurso de brief. A regeração vai usar apenas o rascunho atual + o seu ajuste.
+        </p>
+      )}
       <input type="hidden" name="id" value={id} />
       <input
         type="text"
@@ -173,10 +178,14 @@ export function ItemActions({
   id,
   status,
   regenBlocked,
+  isClip,
+  hasBrief,
 }: {
   id: string
   status: ContentStatus
   regenBlocked: boolean
+  isClip: boolean
+  hasBrief: boolean
 }) {
   return (
     <div className="space-y-4">
@@ -198,8 +207,9 @@ export function ItemActions({
 
       {(status === "draft" || status === "in_review") && <ScheduleForm id={id} />}
 
-      {status !== "published" && status !== "archived" && (
-        <RegenerateForm id={id} disabled={regenBlocked} />
+      {/* Regenerar é verbo de peça de texto/motion — não se aplica a clipe. */}
+      {!isClip && status !== "published" && status !== "archived" && (
+        <RegenerateForm id={id} disabled={regenBlocked} hasBrief={hasBrief} />
       )}
     </div>
   )

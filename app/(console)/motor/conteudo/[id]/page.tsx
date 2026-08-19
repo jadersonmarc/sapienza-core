@@ -107,7 +107,13 @@ export default async function ContentDetailPage({
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <ItemActions id={item.id} status={item.status} regenBlocked={item.regen_count >= REGEN_LIMIT} />
+          <ItemActions
+            id={item.id}
+            status={item.status}
+            regenBlocked={item.regen_count >= REGEN_LIMIT}
+            isClip={item.is_clip === true}
+            hasBrief={Boolean(item.brief && item.brief.trim())}
+          />
           <DeleteButton id={item.id} />
         </div>
 
