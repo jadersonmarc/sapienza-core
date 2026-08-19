@@ -147,10 +147,11 @@ export async function createMotionAction(_prev: ActionState, formData: FormData)
   // Preferências opcionais ("" = automático → não envia; o motor valida).
   const archetype = String(formData.get("archetype") ?? "").trim() || undefined
   const audio = String(formData.get("audio") ?? "").trim() || undefined
+  const imageUrl = String(formData.get("imageUrl") ?? "").trim() || undefined
   let id: string
   try {
     const ctx = await motorContext()
-    const created = await createMotion(ctx, prompt, channel, { archetype, audio })
+    const created = await createMotion(ctx, prompt, channel, { archetype, audio, imageUrl })
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça de motion" }

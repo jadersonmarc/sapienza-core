@@ -193,7 +193,7 @@ export async function createMotion(
   ctx: MotorCtx,
   prompt: string,
   channel: "instagram" | "linkedin" = "instagram",
-  opts: { archetype?: string; audio?: string } = {},
+  opts: { archetype?: string; audio?: string; imageUrl?: string } = {},
 ): Promise<{ id: string; slug: string }> {
   return call<{ id: string; slug: string }>(
     ctx,

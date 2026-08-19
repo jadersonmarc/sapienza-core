@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState } from "react"
+import { useActionState, useRef, useState, useTransition } from "react"
 import { createMotionAction, type ActionState } from "../actions"
 
 const initial: ActionState = {}
@@ -9,6 +9,28 @@ const initial: ActionState = {}
 // a partir do brief; renderiza em vídeo (segundo plano) e entra em aprovação.
 export function MotionForm() {
   const [state, action, pending] = useActionState(createMotionAction, initial)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [imageUrl, setImageUrl] = useState("")
+  const [uploading, startUpload] = useTransition()
+  const [imgErr, setImgErr] = useState<string | null>(null)
+
+  function onPickImage() {
+    const file = fileRef.current?.files?.[0]
+    if (!file) return
+    setImgErr(null)
+    startUpload(async () => {
+      const fd = new FormData()
+      fd.set("file", file)
+      const res = await fetch("/motor/midia/api/upload", { method: "POST", body: fd })
+      const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string }
+      if (!res.ok || !body.url) {
+        setImgErr(body.error ?? "falha ao enviar a imagem")
+        return
+      }
+      setImageUrl(body.url)
+    })
+  }
+
   return (
     <form action={action} className="flex flex-col gap-2 rounded-xl border border-border p-4">
       <label className="text-sm font-medium">Peça em movimento (vídeo)</label>
@@ -53,6 +75,31 @@ export function MotionForm() {
           </select>
         </label>
       </div>
+      {/* Imagem de fundo opcional (item 7). Reusa o upload de mídia (bucket-por-tenant,
+          validação, erro pt-BR). Sem imagem, a peça renderiza como hoje. */}
+      <input type="hidden" name="imageUrl" value={imageUrl} />
+      <div className="flex flex-wrap items-center gap-2 border-t border-border pt-2">
+        <span className="text-xs text-muted-foreground">Imagem de fundo (opcional):</span>
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" className="text-xs" />
+        <button
+          type="button"
+          onClick={onPickImage}
+          disabled={uploading}
+          className="rounded-md border border-border px-2 py-1 text-xs font-medium hover:bg-muted disabled:opacity-50"
+        >
+          {uploading ? "Enviando…" : "Enviar imagem"}
+        </button>
+        {imageUrl && (
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            ✓ imagem anexada
+            <button type="button" onClick={() => setImageUrl("")} className="text-destructive hover:underline">
+              remover
+            </button>
+          </span>
+        )}
+        {imgErr && <span className="text-xs text-destructive">{imgErr}</span>}
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"
