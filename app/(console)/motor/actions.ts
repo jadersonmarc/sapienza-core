@@ -29,10 +29,27 @@ import {
   deleteClip,
   deleteClipVideo,
   MotorError,
+  type CaptionStyleInput,
 } from "@/lib/motor/client"
 import type { AnalysisType, ContentFormat, ContentStatus, Platform } from "@/lib/motor/types"
 
 export type ActionState = { ok?: boolean; error?: string; message?: string }
+
+// Monta o estilo de legenda do motion a partir do form (item 8a). Só inclui o que foi
+// escolhido; tudo vazio → undefined (herda o default do tenant). Valores fora dos
+// tokens são ignorados aqui e revalidados no motor.
+const CAP_FONTS = ["display", "sans", "mono"] as const
+const CAP_COLORS = ["default", "accent", "signal"] as const
+function pickCaptionStyle(formData: FormData): CaptionStyleInput | undefined {
+  const font = String(formData.get("captionFont") ?? "").trim()
+  const color = String(formData.get("captionColor") ?? "").trim()
+  const highlight = String(formData.get("captionHighlight") ?? "").trim()
+  const out: CaptionStyleInput = {}
+  if ((CAP_FONTS as readonly string[]).includes(font)) out.font = font as CaptionStyleInput["font"]
+  if ((CAP_COLORS as readonly string[]).includes(color)) out.color = color as CaptionStyleInput["color"]
+  if ((CAP_COLORS as readonly string[]).includes(highlight)) out.highlight = highlight as CaptionStyleInput["highlight"]
+  return Object.keys(out).length > 0 ? out : undefined
+}
 
 // Importa um arquivo da conta de nuvem conectada (Drive/Dropbox) para a esteira.
 export async function importFromConnectorAction(
@@ -148,10 +165,13 @@ export async function createMotionAction(_prev: ActionState, formData: FormData)
   const archetype = String(formData.get("archetype") ?? "").trim() || undefined
   const audio = String(formData.get("audio") ?? "").trim() || undefined
   const imageUrl = String(formData.get("imageUrl") ?? "").trim() || undefined
+  // Estilo de legenda (item 8a): só monta o objeto com o que foi escolhido ("" =
+  // herda o default do tenant). O motor sanitiza/valida os tokens.
+  const captionStyle = pickCaptionStyle(formData)
   let id: string
   try {
     const ctx = await motorContext()
-    const created = await createMotion(ctx, prompt, channel, { archetype, audio, imageUrl })
+    const created = await createMotion(ctx, prompt, channel, { archetype, audio, imageUrl, captionStyle })
     id = created.id
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao criar peça de motion" }
@@ -381,6 +401,9 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       cadence_days: Number.isFinite(cadence) ? cadence : 7,
       handle: String(formData.get("handle") ?? "").trim(),
       logo_url: String(formData.get("logo_url") ?? "").trim(),
+      // Estilo de legenda default (item 8a). Reusa o mesmo picker do form de peça; o
+      // motor sanitiza os tokens. Tudo vazio → null (herda os valores atuais).
+      caption_style: pickCaptionStyle(formData) ?? null,
     })
     revalidatePath("/motor/agente")
     revalidatePath("/motor")

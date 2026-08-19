@@ -100,6 +100,39 @@ export function MotionForm() {
         {imgErr && <span className="text-xs text-destructive">{imgErr}</span>}
       </div>
 
+      {/* Estilo da legenda (item 8a) — restrito aos tokens da marca. "Padrão da marca"
+          herda o default do tenant (Brand Kit); render idêntico ao atual quando nada é
+          escolhido. Tamanho e posição não mudam aqui (layout dos presets é fixo). */}
+      <div className="flex flex-wrap items-center gap-3 border-t border-border pt-2">
+        <span className="text-xs text-muted-foreground">Legenda:</span>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Fonte:</span>
+          <select name="captionFont" defaultValue="" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="">Padrão da marca</option>
+            <option value="display">Display</option>
+            <option value="sans">Sans</option>
+            <option value="mono">Mono</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Cor:</span>
+          <select name="captionColor" defaultValue="" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="">Padrão da marca</option>
+            <option value="default">Padrão</option>
+            <option value="accent">Acento</option>
+            <option value="signal">Destaque</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Realce:</span>
+          <select name="captionHighlight" defaultValue="" className="rounded-lg border border-border bg-background px-2 py-1 text-sm">
+            <option value="">Padrão da marca</option>
+            <option value="accent">Acento</option>
+            <option value="signal">Destaque</option>
+          </select>
+        </label>
+      </div>
+
       <div className="flex items-center gap-3">
         <button
           type="submit"

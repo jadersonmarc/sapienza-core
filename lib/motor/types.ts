@@ -118,6 +118,12 @@ export type EditorConfig = {
   cadence_days: number
   handle: string // @marca no rodapé das peças de motion (vazio = default)
   logo_url: string // URL https do logo no rodapé das peças de motion (vazio = monograma)
+  // Estilo de legenda default do motion (item 8a) — restrito a tokens. null = valores atuais.
+  caption_style: {
+    font?: "display" | "sans" | "mono"
+    color?: "default" | "accent" | "signal"
+    highlight?: "default" | "accent" | "signal"
+  } | null
 }
 
 export type SetupStatus = {

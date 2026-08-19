@@ -189,11 +189,18 @@ export async function createContent(
 
 /** Cria uma peça de MOTION (vídeo). Capability-gated no Motor (403 se o plano não
  *  tem motion). Roda geração + render em segundo plano; volta 202 { id, slug }. */
+// Estilo de legenda do motion (item 8a) — restrito a tokens; o motor revalida/sanitiza.
+export type CaptionStyleInput = {
+  font?: "display" | "sans" | "mono"
+  color?: "default" | "accent" | "signal"
+  highlight?: "default" | "accent" | "signal"
+}
+
 export async function createMotion(
   ctx: MotorCtx,
   prompt: string,
   channel: "instagram" | "linkedin" = "instagram",
-  opts: { archetype?: string; audio?: string; imageUrl?: string } = {},
+  opts: { archetype?: string; audio?: string; imageUrl?: string; captionStyle?: CaptionStyleInput } = {},
 ): Promise<{ id: string; slug: string }> {
   return call<{ id: string; slug: string }>(
     ctx,

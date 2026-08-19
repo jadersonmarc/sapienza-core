@@ -131,6 +131,35 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
         </p>
       </div>
 
+      {/* Legenda padrão das peças de motion (item 8a) — restrito aos tokens da marca.
+          "Padrão da marca" = valores atuais. Cada peça pode sobrescrever no momento da
+          criação. Tamanho e posição não são configuráveis (layout dos presets é fixo). */}
+      <div className="space-y-1">
+        <label className={label}>Legenda padrão (peças de motion)</label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <select name="captionFont" defaultValue={cfg.caption_style?.font ?? ""} className={field}>
+            <option value="">Fonte: padrão da marca</option>
+            <option value="display">Fonte: Display</option>
+            <option value="sans">Fonte: Sans</option>
+            <option value="mono">Fonte: Mono</option>
+          </select>
+          <select name="captionColor" defaultValue={cfg.caption_style?.color ?? ""} className={field}>
+            <option value="">Cor: padrão da marca</option>
+            <option value="default">Cor: Padrão</option>
+            <option value="accent">Cor: Acento</option>
+            <option value="signal">Cor: Destaque</option>
+          </select>
+          <select name="captionHighlight" defaultValue={cfg.caption_style?.highlight ?? ""} className={field}>
+            <option value="">Realce: padrão da marca</option>
+            <option value="accent">Realce: Acento</option>
+            <option value="signal">Realce: Destaque</option>
+          </select>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Aplica-se à fonte, cor do texto e cor de realce dos 4 formatos. Vazio = como está hoje.
+        </p>
+      </div>
+
       <div className="space-y-1">
         <label className={label} htmlFor="themes">
           Temas / áreas a priorizar
