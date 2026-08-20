@@ -555,3 +555,15 @@ export async function deleteClip(ctx: MotorCtx, id: string): Promise<{ ok: boole
 export async function deleteClipVideo(ctx: MotorCtx, sourceId: string): Promise<{ ok: boolean; deletedClips: number }> {
   return call<{ ok: boolean; deletedClips: number }>(ctx, `/api/v1/content/clip/${sourceId}`, { method: "DELETE" })
 }
+
+/** Limpa em LOTE todas as fontes que falharam (status='error'). Sem estorno (já
+ *  estornado na falha). Devolve contagens + bytes liberados. */
+export async function purgeFailedClips(
+  ctx: MotorCtx,
+): Promise<{ ok: boolean; deletedSources: number; deletedClips: number; freedBytes: number }> {
+  return call<{ ok: boolean; deletedSources: number; deletedClips: number; freedBytes: number }>(
+    ctx,
+    "/api/v1/content/clip/purge-failed",
+    { method: "POST" },
+  )
+}

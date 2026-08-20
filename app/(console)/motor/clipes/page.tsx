@@ -5,6 +5,7 @@ import type { ClipSource, ClipHoursQuota } from "@/lib/motor/types"
 import type { ClipConnectors } from "@/lib/motor/client"
 import { ClipImportPanel } from "./import-panel"
 import { ConnectorsPanel } from "./connectors-panel"
+import { PurgeFailedButton } from "./purge-failed-button"
 
 // Rótulos pt-BR dos estágios da esteira (clip_sources.status).
 const STAGE: Record<string, { label: string; done?: boolean; error?: boolean }> = {
@@ -59,6 +60,7 @@ export default async function ClipesPage() {
   }
 
   const processing = sources.some((s) => s.status !== "done" && s.status !== "error")
+  const failedCount = sources.filter((s) => s.status === "error").length
 
   return (
     <div className="space-y-6">
@@ -81,6 +83,8 @@ export default async function ClipesPage() {
       <ClipImportPanel exhausted={!!quota && quota.remainingMinutes <= 0} autoRefresh={processing} />
 
       <ConnectorsPanel connectors={connectors} />
+
+      <PurgeFailedButton count={failedCount} />
 
       {unavailable ? (
         <p className="text-sm text-muted-foreground">Serviço indisponível ({unavailable}).</p>

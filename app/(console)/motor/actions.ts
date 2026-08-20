@@ -28,6 +28,7 @@ import {
   importClipFromConnector,
   deleteClip,
   deleteClipVideo,
+  purgeFailedClips,
   MotorError,
   type CaptionStyleInput,
 } from "@/lib/motor/client"
@@ -89,6 +90,19 @@ export async function deleteClipAction(id: string): Promise<{ error?: string }> 
     return {}
   } catch (e) {
     return { error: e instanceof MotorError ? e.message : "falha ao excluir o clipe" }
+  }
+}
+
+// Limpa em lote todas as fontes que falharam (caso 1 — direto, sem confirmação).
+export async function purgeFailedClipsAction(): Promise<{ error?: string; message?: string }> {
+  try {
+    const ctx = await motorContext()
+    const r = await purgeFailedClips(ctx)
+    const mb = (r.freedBytes / 1024 / 1024).toFixed(1)
+    revalidatePath("/motor/clipes")
+    return { message: `Limpou ${r.deletedSources} falha(s) e ${r.deletedClips} clipe(s) parcial(is) — ${mb} MB liberados.` }
+  } catch (e) {
+    return { error: e instanceof MotorError ? e.message : "falha ao limpar as falhas" }
   }
 }
 
