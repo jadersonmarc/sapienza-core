@@ -124,6 +124,9 @@ export type EditorConfig = {
     color?: "default" | "accent" | "signal"
     highlight?: "default" | "accent" | "signal"
   } | null
+  // Fundos-padrão do tenant (Brand Kit): URLs de mídia. Peça sem imagem própria pega
+  // um por rotação. Máx. 5.
+  background_keys: string[]
 }
 
 export type SetupStatus = {

@@ -28,6 +28,31 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
   // Logo: campo controlado para o upload preencher a URL (o save grava logo_url).
   const [logoUrl, setLogoUrl] = useState(cfg.logo_url)
   const [uploading, setUploading] = useState<null | "ok" | "erro" | "enviando">(null)
+  // Fundos-padrão do Brand Kit (item deste ciclo): lista controlada de URLs de mídia.
+  // Máx. 5. Enviados pelo mesmo upload; o save grava background_keys (hidden JSON).
+  const MAX_BG = 5
+  const [backgrounds, setBackgrounds] = useState<string[]>(cfg.background_keys ?? [])
+  const [bgState, setBgState] = useState<null | "enviando" | "erro" | "cheio">(null)
+
+  async function uploadBackground(file: File) {
+    if (backgrounds.length >= MAX_BG) {
+      setBgState("cheio")
+      return
+    }
+    setBgState("enviando")
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("folder", "geral")
+      const res = await fetch("/motor/midia/api/upload", { method: "POST", body: fd })
+      const data = (await res.json()) as { url?: string; error?: string }
+      if (!res.ok || !data.url) throw new Error(data.error ?? "falha")
+      setBackgrounds((prev) => (prev.includes(data.url!) || prev.length >= MAX_BG ? prev : [...prev, data.url!]))
+      setBgState(null)
+    } catch {
+      setBgState("erro")
+    }
+  }
 
   async function uploadLogo(file: File) {
     setUploading("enviando")
@@ -157,6 +182,47 @@ export function AgenteForm({ cfg, formats }: { cfg: EditorConfig; formats: Conte
         </div>
         <p className="text-xs text-muted-foreground">
           Aplica-se à fonte, cor do texto e cor de realce dos 4 formatos. Vazio = como está hoje.
+        </p>
+      </div>
+
+      {/* Fundos-padrão do Brand Kit: imagens de exemplo que viram o fundo das peças de
+          motion sem imagem própria (rotação entre elas). Ver/adicionar/remover, máx. 5. */}
+      <div className="space-y-2">
+        <label className={label}>Fundos-padrão das peças de motion (máx. 5)</label>
+        <input type="hidden" name="background_keys" value={JSON.stringify(backgrounds)} />
+        {backgrounds.length > 0 && (
+          <div className="flex flex-wrap gap-3">
+            {backgrounds.map((url) => (
+              <div key={url} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={url} alt="fundo" className="h-20 w-20 rounded border border-border object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setBackgrounds((prev) => prev.filter((u) => u !== url))}
+                  className="absolute -right-2 -top-2 rounded-full border border-border bg-background px-1.5 text-xs text-destructive hover:bg-muted"
+                  aria-label="remover fundo"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            accept="image/*"
+            disabled={backgrounds.length >= MAX_BG || bgState === "enviando"}
+            onChange={(e) => e.target.files?.[0] && uploadBackground(e.target.files[0])}
+            className="text-sm disabled:opacity-50"
+          />
+          {bgState === "enviando" && <span className="text-xs text-muted-foreground">enviando…</span>}
+          {bgState === "erro" && <span className="text-xs text-destructive">falha no upload</span>}
+          {bgState === "cheio" && <span className="text-xs text-destructive">limite de {MAX_BG} atingido</span>}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          A Margot usa uma destas como fundo, em rodízio, quando a peça não tem imagem própria. Sem
+          nenhuma, a peça sai com o campo chapado, como hoje.
         </p>
       </div>
 

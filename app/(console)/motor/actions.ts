@@ -418,6 +418,16 @@ export async function saveEditorConfigAction(_prev: ActionState, formData: FormD
       // Estilo de legenda default (item 8a). Reusa o mesmo picker do form de peça; o
       // motor sanitiza os tokens. Tudo vazio → null (herda os valores atuais).
       caption_style: pickCaptionStyle(formData) ?? null,
+      // Fundos-padrão do Brand Kit (URLs de mídia, JSON no hidden input). O motor
+      // revalida (https + /api/media/, dedup, máx. 5).
+      background_keys: (() => {
+        try {
+          const j = JSON.parse(String(formData.get("background_keys") ?? "[]"))
+          return Array.isArray(j) ? j.map(String).slice(0, 5) : []
+        } catch {
+          return []
+        }
+      })(),
     })
     revalidatePath("/motor/agente")
     revalidatePath("/motor")
