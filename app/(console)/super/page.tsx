@@ -74,11 +74,76 @@ export default async function SuperPage() {
     }
   })
 
+  // Saúde dos crons (item 3/5): último CronRan por job, direto do outbox. Distingue
+  // "rodou e não tinha nada" (processados=0, execução recente) de "não rodou" (execução
+  // antiga/ausente). erro de CONEXÃO é separado de erro de APLICAÇÃO.
+  const cronRuns = (await db.execute(sql`
+    SELECT DISTINCT ON (payload->>'job')
+           payload->>'job' AS job,
+           (payload->>'processed')::int AS processed,
+           (payload->>'app_errors')::int AS app_errors,
+           (payload->>'conn_errors')::int AS conn_errors,
+           created_at
+      FROM public.event_outbox
+     WHERE type = 'CronRan'
+     ORDER BY payload->>'job', id DESC
+  `)) as unknown as {
+    job: string
+    processed: number
+    app_errors: number
+    conn_errors: number
+    created_at: string
+  }[]
+  const agoMin = (iso: string) => Math.round((Date.now() - new Date(iso).getTime()) / 60000)
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <Eyebrow>Sapienza · Plataforma</Eyebrow>
         <h1 className="font-display text-2xl font-semibold tracking-tight">Onboarding & tenants</h1>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-medium text-muted-foreground">Saúde dos crons (Editora)</h2>
+        {cronRuns.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma execução registrada ainda.</p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full min-w-[32rem] text-sm">
+              <thead className="text-muted-foreground">
+                <tr className="text-left">
+                  <th className="px-4 py-2 font-medium">Cron</th>
+                  <th className="px-4 py-2 font-medium">Última execução</th>
+                  <th className="px-4 py-2 font-medium">Processados</th>
+                  <th className="px-4 py-2 font-medium">Erros app</th>
+                  <th className="px-4 py-2 font-medium">Erros conexão</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cronRuns.map((c) => {
+                  const min = agoMin(c.created_at)
+                  const stale = min > 90 // não roda há mais de 1h30 → provável "não rodou"
+                  return (
+                    <tr key={c.job} className="border-t border-border">
+                      <td className="px-4 py-2 font-mono text-xs">{c.job}</td>
+                      <td className={`px-4 py-2 ${stale ? "text-destructive" : "text-muted-foreground"}`}>
+                        {min < 1 ? "agora" : min < 60 ? `há ${min} min` : `há ${Math.round(min / 60)} h`}
+                        {stale && " ⚠"}
+                      </td>
+                      <td className="px-4 py-2 tabular-nums">{c.processed}</td>
+                      <td className={`px-4 py-2 tabular-nums ${c.app_errors > 0 ? "text-destructive" : ""}`}>{c.app_errors}</td>
+                      <td className={`px-4 py-2 tabular-nums ${c.conn_errors > 0 ? "text-amber-600" : ""}`}>{c.conn_errors}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Processados = itens que o cron tratou (0 com execução recente = rodou e não tinha nada). Erro de conexão
+          (motor caiu no deploy) é separado de erro de aplicação. ⚠ = sem execução recente.
+        </p>
       </div>
 
       <NewTenantForm />
